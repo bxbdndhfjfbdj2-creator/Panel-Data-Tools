@@ -50,6 +50,22 @@ test("workspace schema validates enums, finite values, uniqueness, and reference
   }
 });
 
+test("workspace schema rejects empty or duplicate catalog keys and unresolved idKey", () => {
+  const catalogItem = (key: string) => ({ key, name: key || "未命名", fill: 1, battery: "", nUnique: 1 });
+  const cases: Array<[string, (snap: WorkspaceSnap) => void]> = [
+    ["empty catalog key", (snap) => { snap.dataset.catalog = [catalogItem("")]; }],
+    ["duplicate catalog key", (snap) => { snap.dataset.catalog = [catalogItem("q1"), catalogItem("q1")]; }],
+    ["unresolved idKey", (snap) => { snap.dataset.idKey = "absent"; }],
+    ["empty idKey", (snap) => { snap.dataset.idKey = "  "; }],
+  ];
+  for (const [label, corrupt] of cases) {
+    const snap = makeSnapshot();
+    corrupt(snap);
+    const result = parseWorkspaceResult(snap);
+    assert.equal(result.ok, false, label);
+  }
+});
+
 test("workspace schema defaults optional legacy fields explicitly", () => {
   const oldSnap = makeSnapshot() as unknown as Record<string, unknown>;
   delete oldSnap.missingMode;

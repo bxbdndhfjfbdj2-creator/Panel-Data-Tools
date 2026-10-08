@@ -83,6 +83,9 @@ function validateDataset(value: unknown): { value: Dataset } | { error: string }
   for (const key of ["timeKey", "groupKey", "weightKey", "idKey"] as const) {
     if (!isOptionalKey(ds[key])) return { error: `dataset.${key} 必须是字符串。` };
   }
+  if (typeof ds.idKey === "string" && !ds.idKey.trim()) {
+    return { error: "dataset.idKey 不能为空。" };
+  }
 
   for (let index = 0; index < ds.rows.length; index += 1) {
     const row = ds.rows[index];
@@ -102,6 +105,9 @@ function validateDataset(value: unknown): { value: Dataset } | { error: string }
         return { error: `dataset.${key}「${column}」未出现在数据列中。` };
       }
     }
+  }
+  if (typeof ds.idKey === "string" && !rowKeys.has(ds.idKey)) {
+    return { error: `dataset.idKey「${ds.idKey}」未出现在数据列中。` };
   }
 
   const dimensionIds = new Set<string>();
@@ -150,11 +156,14 @@ function validateDataset(value: unknown): { value: Dataset } | { error: string }
 
   if (ds.catalog !== undefined) {
     if (!Array.isArray(ds.catalog)) return { error: "dataset.catalog 必须是数组。" };
+    const catalogKeys = new Set<string>();
     for (const [index, item] of ds.catalog.entries()) {
-      if (!isRecord(item) || typeof item.key !== "string" || typeof item.name !== "string" || typeof item.battery !== "string" ||
+      if (!isRecord(item) || typeof item.key !== "string" || !item.key.trim() || typeof item.name !== "string" || typeof item.battery !== "string" ||
         !isFiniteNumber(item.fill) || item.fill < 0 || item.fill > 1 || !Number.isSafeInteger(item.nUnique) || (item.nUnique as number) < 0) {
         return { error: `catalog 第 ${index + 1} 项结构无效。` };
       }
+      if (catalogKeys.has(item.key)) return { error: `catalog key「${item.key}」重复。` };
+      catalogKeys.add(item.key);
     }
   }
   if (ds.valueLabels !== undefined) {
