@@ -268,7 +268,7 @@ export function ResultsPanel() {
                 }
               }}
             >
-              <option value="">最新年份</option>
+              <option value="">各实体最新观测</option>
               <option value="mean">时期均值</option>
               {years.map((y) => (
                 <option key={y} value={y}>

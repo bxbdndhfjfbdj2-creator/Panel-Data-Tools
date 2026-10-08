@@ -135,6 +135,36 @@ test("report captures actual run context, escapes table text, and separates full
   assert.equal(markdownText("a|b\nc"), "a\\|b<br>c");
 });
 
+test("latest-view report lists each entity's actual observation year", () => {
+  const source = panelFixture();
+  const dataset = {
+    ...source,
+    rows: source.rows.filter((row) =>
+      (row.id === "e0" && row.year === 2020) || (row.id === "e1" && row.year === 2021)),
+  };
+  const weights = computeWeights(dataset, "equal");
+  const scored = computeScores(dataset, weights, "minmax", "equal");
+  const ranking = selectResultRows(scored.rows, { mode: "latest", year: null });
+  const report = buildMarkdownReport({
+    dataset,
+    method: "equal",
+    standardize: "minmax",
+    missingMode: "listwise",
+    yearFrom: null,
+    yearTo: null,
+    screen: [],
+    weights,
+    ranking,
+    kmo: null,
+    dropped: 0,
+    alpha: null,
+    view: { mode: "latest", year: null },
+  });
+  assert.match(report, /\| 排名 \| 名称 \| 观测期 \| 综合指数 \| 分组 \|/);
+  assert.ok(report.includes("| e0 | 2020 年 |"));
+  assert.ok(report.includes("| e1 | 2021 年 |"));
+});
+
 test("export filenames are safe and deterministically de-duplicated", () => {
   const first = allocateExportFilename("指标/目标: A", "csv", []);
   assert.equal(first, "指标_目标_ A.csv");

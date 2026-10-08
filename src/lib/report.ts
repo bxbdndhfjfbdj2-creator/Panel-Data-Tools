@@ -1,6 +1,6 @@
 import { flagSummary, type CrossMethod, type InfluenceRow } from "./engine";
 import type { SensitivitySummary, YearStability } from "./diagnose";
-import { actualLatestYear, describeActualYears, numericYears, resultViewDescription } from "./slice";
+import { actualLatestYear, describeActualYears, numericYears, resultPeriodLabel, resultViewDescription } from "./slice";
 import {
   FLAG_LABEL,
   METHOD_META,
@@ -202,10 +202,10 @@ export function buildMarkdownReport(opts: {
   lines.push("## 五、综合结果");
   lines.push(`共 ${ranking.length} 个${ds.kind === "panel" ? "个体" : "样本"}纳入排名（${resultViewDescription(ds.kind, view, actualLatestYear(ds))}）。`);
   lines.push("");
-  lines.push("| 排名 | 名称 | 综合指数 | 分组 |");
-  lines.push("| --- | --- | --- | --- |");
+  lines.push("| 排名 | 名称 | 观测期 | 综合指数 | 分组 |");
+  lines.push("| --- | --- | --- | --- | --- |");
   ranking.slice(0, 40).forEach((r, i) => {
-    lines.push(`| ${i + 1} | ${markdownText(r.entity)} | ${fmt(r.composite, 2)} | ${markdownText(r.group ?? "—")} |`);
+    lines.push(`| ${i + 1} | ${markdownText(r.entity)} | ${resultPeriodLabel(ds.kind, view, r.time)} | ${fmt(r.composite, 2)} | ${markdownText(r.group ?? "—")} |`);
   });
   if (opts.crossMethod) {
     lines.push("");
