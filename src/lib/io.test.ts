@@ -133,6 +133,13 @@ test("CSV and TSV preserve identifiers, source codes, duplicate columns, and spa
   assert.equal(tsv.rows[0]?.measure, -4);
 });
 
+test("CSV preserves leading zeroes for an inferred entity column without a preset hint", () => {
+  const ds = datasetFromCsv("generic-ids.csv", "case,value\n001,1\n002,2\n");
+  assert.equal(ds.entityKey, "case");
+  assert.deepEqual(ds.rows.map((row) => row.case), ["001", "002"]);
+  assert.deepEqual(ds.rows.map((row) => row.value), [1, 2]);
+});
+
 test("CSV rejects malformed widths and unclosed quotes with Chinese guidance", () => {
   assert.throws(() => datasetFromCsv("broken.csv", "id,value\n1,2,3\n"), /第 2 行有 3 列/);
   assert.throws(() => datasetFromCsv("broken.csv", 'id,value\n1,"2\n'), /引号未闭合/);

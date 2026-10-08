@@ -379,6 +379,29 @@ function attachValueLabels(
 export function datasetFromCsv(name: string, text: string): Dataset {
   const { headers, rows: raw } = parseCsv(text);
   if (!headers.length) throw new Error("未能解析到表头。");
+  // Infer the same entity column from raw CSV cells before coercion so a
+  // generic entity header can retain identifiers such as "001" as text.
+  const rawRows: DataRow[] = raw.map((r) => {
+    const o: DataRow = {};
+    for (const h of headers) o[h] = r[h] ?? "";
+    return o;
+  });
+  const timeKey = headers.find((h) => TIME_HINTS.some((k) => fieldMatches(h, k)));
+  const entityHeaders = headers.filter((h) => h !== timeKey);
+  const entityKey =
+    pickHint(entityHeaders, ENTITY_HINTS, rawRows, true) ??
+    entityHeaders.find((h) => {
+      const numericCount = raw.reduce((count, r) => {
+        const value = (r[h] ?? "").trim();
+        if (!value) return count;
+        const n = toNum(value);
+        return n != null && !(Number.isInteger(n) && !Number.isSafeInteger(n))
+          ? count + 1
+          : count;
+      }, 0);
+      return numericCount / Math.max(raw.length, 1) < 0.6;
+    }) ??
+    headers[0]!;
   const parsed: DataRow[] = raw.map((r) => {
     const o: DataRow = {};
     for (const h of headers) {
@@ -386,7 +409,7 @@ export function datasetFromCsv(name: string, text: string): Dataset {
       const v = rawValue.trim();
       if (v === "") { o[h] = null; continue; }
       // Text identifiers retain leading zeroes and digits beyond JS's exact integer range.
-      if (looksLikeIdColumn(h) || ENTITY_HINTS.some((hint) => fieldMatches(h, hint))) {
+      if (h === entityKey || looksLikeIdColumn(h) || ENTITY_HINTS.some((hint) => fieldMatches(h, hint))) {
         o[h] = rawValue;
         continue;
       }

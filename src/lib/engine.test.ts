@@ -164,4 +164,3 @@ test("formative survey indicators do not receive reflective alpha screening flag
   assert.ok(rows.every((r) => r.itemTotal == null));
   assert.ok(rows.every((r) => !r.flags.includes("low_item_total") && !r.flags.includes("hurts_alpha")));
 });
-
