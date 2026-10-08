@@ -1,0 +1,335 @@
+
+> test
+> node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts
+
+✔ non-canvas app with no custom card gets a soft BRAND NOTE (utility exception) (3.449572ms)
+✔ non-canvas app with a compliant card is silent (1.878863ms)
+✔ card file without site.json card=custom warns (0.646082ms)
+✔ card file with missing site.json warns for card=custom (0.446202ms)
+✔ card file with invalid site.json warns for card=custom (1.535661ms)
+✔ oversized card warns for non-canvas apps too (0.598561ms)
+✔ canvas app with no card warns 'missing' and missing og:type (1.230262ms)
+✔ canvas card without type still warns for og:type (1.099965ms)
+✔ oversized card warns on the scraper budget (jpg and legacy png) (1.577094ms)
+✔ compliant game (custom card + site.json type + x-banner) is silent (0.713715ms)
+✔ __root.tsx og:type no longer satisfies the canvas gate (0.427664ms)
+✔ oversized x-banner warns on the same scraper budget as og.jpg (0.688837ms)
+✔ legacy png + site.json type still needs the X feed card (0.300733ms)
+✔ siteDeclaresOgTypeGame reads the site contract (0.114131ms)
+✔ a fresh og-pending marker silences the whole gate view (0.217487ms)
+✔ a stale og-pending marker is ignored and the warnings return (0.221613ms)
+✔ the marker goes stale on the clock, not on the file (0.367894ms)
+✔ no marker means nothing is in flight (0.128624ms)
+✔ parseBrandCheckArgs takes --game, --placeholder-ok and --root, and rejects the rest (0.237288ms)
+✔ cli: a game missing its card reports JSON and exits 1 (79.481704ms)
+✔ cli: a compliant game passes (43.239217ms)
+✔ cli: the task's own marker is reported, not honoured (102.635285ms)
+✔ cli: a bad argument fails with JSON on stderr (93.150095ms)
+✔ cli: a non-game with no card fails too — the pass exists to produce one (63.944249ms)
+✔ cli: --placeholder-ok is how a plain-utility pass reports no card as expected (121.108759ms)
+✔ cli: a non-game with a compliant card passes (51.562719ms)
+✔ SKILL.md and AGENTS.md name the marker path and bound this script uses (0.488385ms)
+✔ the sections that own the brand-task prohibition never affirm a wait (27.137593ms)
+✔ SKILL.md tells the pass to self-check with the flag this CLI accepts (0.306922ms)
+✔ normalizes whitespace before hashing (1.759829ms)
+✔ nullish and blank body text normalize to the empty string (0.137757ms)
+✔ body text prefix is normalized and capped (0.114633ms)
+✔ identical runs do not diverge (0.713754ms)
+✔ status change diverges (0.370237ms)
+✔ title change diverges (0.201232ms)
+✔ title comparison is skipped when either side lacks one (0.314023ms)
+✔ canvas disappearing diverges; canvas appearing does not (0.226652ms)
+✔ horizontal overflow appearing diverges; clearing does not (0.185629ms)
+✔ new console errors diverge (0.204888ms)
+✔ errors already present in the baseline do not re-diverge (0.225799ms)
+✔ body text collapse diverges (0.185819ms)
+✔ body text dropping to zero reports collapse (0.163456ms)
+✔ zero-length baseline reports growth via the hash branch, not collapse (0.111578ms)
+✔ hash mismatch with a trivial length delta and same page start is tolerated (0.065889ms)
+✔ hash mismatch with a trivial length delta but changed page start diverges (0.079349ms)
+✔ prefix check is skipped when either side lacks a prefix (0.101513ms)
+✔ length-delta tolerance boundary: 50 tolerated, 51 diverges (500-char baseline) (0.084648ms)
+✔ length-delta floor dominates small baselines: 20 tolerated, 21 diverges (100-char baseline) (0.064767ms)
+✔ collapse boundary: exactly half is 'changed', one below is 'collapsed' (0.114783ms)
+✔ missing baseline viewport diverges (0.081182ms)
+✔ empty or null baseline diverges for every viewport (0.139239ms)
+✔ degenerate current verdict fails closed (0.179761ms)
+✔ multiple signals across viewports all accumulate (0.081393ms)
+✔ baselineComparison round-trips a valid baseline (0.151888ms)
+✔ baselineComparison fails closed on malformed or wrong-shape baselines (0.319812ms)
+✔ parseSmokeArgs defaults (0.156716ms)
+✔ parseSmokeArgs consumes --baseline without shifting positionals (0.072499ms)
+✔ parseSmokeArgs rejects a trailing --baseline flag (0.063746ms)
+✔ parseSmokeArgs supports the --baseline= form (0.064467ms)
+✔ parseSmokeArgs rejects unknown flags instead of treating them as positionals (0.065248ms)
+✔ parseSmokeArgs env fallback and flag precedence (0.168854ms)
+✔ derivedPaths handles .png, .PNG, and extensionless inputs (0.362946ms)
+✔ exitCodeFor: clean run exits 0 (0.119209ms)
+✔ exitCodeFor: errors in any single viewport exit 2 (0.090036ms)
+✔ exitCodeFor: navigation failure in any viewport exits 1, beating errors (0.103846ms)
+✔ exitCodeFor: 4xx boundary and missing status (0.103275ms)
+✔ exitCodeFor: no viewport data is a failure (0.058728ms)
+✔ browser-smoke wires the guard and verdict helpers (0.354784ms)
+✔ browser-smoke file I/O only touches guarded paths (0.325079ms)
+✔ the flag predicate matches src/lib/auth (1.269361ms)
+✔ reads the value a live dev server resolved (0.420272ms)
+✔ a server started without the flag reads as sign-in on (0.197958ms)
+✔ agreement passes (0.290017ms)
+✔ divergence fails in either direction (0.287272ms)
+✔ an unobservable dev server is indeterminate, not agreement (0.63124ms)
+✔ a dev server that cannot be reached probes as null (0.263797ms)
+✔ a server without the endpoint probes as null, not as agreement (0.335295ms)
+✔ only a divergence warns the smoke verdict (0.930691ms)
+✔ the build side resolves the template's shipped app-env (1.285214ms)
+✔ the CLI reports rather than silently passing when run via a symlink (200.150019ms)
+✔ injects before </head> (4.744801ms)
+✔ injects the extensions script without a project id (0.623848ms)
+✔ injects project id on the script and meta when provided (0.341975ms)
+✔ does not duplicate grok:app_id (0.881637ms)
+✔ omits x:creator tags without both creator values (1.097902ms)
+✔ injects x:creator tags when both creator values are set (0.322856ms)
+✔ escapes x:creator values (0.172599ms)
+✔ does not duplicate x:creator tags (0.428865ms)
+✖ platform chrome overwrites share-card metas and always sets og:title (1.28886ms)
+✔ does not duplicate twitter:card or og:title (0.589326ms)
+✔ a baked site.image is treated as a custom card (0.730269ms)
+✔ baked identity does not need a workspace filesystem (0.370888ms)
+✔ a public card file wins over a baked site without card=custom (0.472891ms)
+✔ public/og.png wins when jpg is absent (0.261123ms)
+✔ resolveOgCardAsset: disk file, then bake, then empty (placeholder) (0.227042ms)
+✔ snapshotOgIdentity stamps card=custom from a public card file (0.243507ms)
+✔ snapshotOgIdentity stamps banner from public/x-banner.jpg (0.221042ms)
+✔ emits x:game:image for a public host when site.banner is set (0.689057ms)
+✔ does not emit x:game:image without a public host or banner (0.28575ms)
+✔ site title Grok App is a real name, not a sentinel (0.295064ms)
+✖ published grok.me slug is still a title fallback (0.639963ms)
+✔ rejects Vercel system hosts as og:image origins (0.107041ms)
+✔ published VITE_PUBLIC_HOSTNAME wins over request Host for og:image (0.316446ms)
+✔ vercel Host without a public hostname emits no og:image (0.311489ms)
+✔ emits og:image for a public host and prefers a custom card (0.301804ms)
+✔ placeholder og:image appends site.color when it is 6-digit hex (0.274673ms)
+✖ document title entities are not double-escaped on og:title (0.264277ms)
+✔ site.json title wins over the host slug (0.192921ms)
+✖ injects into documents with no head element (0.463197ms)
+✖ streaming injector matches </HEAD> case-insensitively (1.261579ms)
+✔ does not duplicate the extensions script (0.337888ms)
+✔ is idempotent (0.269626ms)
+✖ uses the app name in the injected title tag (0.269605ms)
+✔ streaming injector handles </head> split across chunks (0.513523ms)
+✔ streaming injector passes post-head chunks through untouched (0.367613ms)
+✔ streaming injector falls back when no </head> is seen (0.310607ms)
+✔ detects install query (0.262885ms)
+✔ filters non-document paths (0.422827ms)
+✔ strips install params from the app link (0.208995ms)
+✔ names the install page from host slug (0.130787ms)
+✔ rejects hosts that are not plain slugs (0.091327ms)
+✔ renders install page markup (0.276406ms)
+✔ escapes host-derived values in the install page (0.206281ms)
+✔ renders the manifest with the per-app name (0.202014ms)
+✔ vite config keeps the nitro serverDir wiring (0.228694ms)
+✔ nitro middleware and its bundled assets exist (0.256155ms)
+✔ vite plugin bakes og identity as a virtual module (0.310287ms)
+✔ _migrations keys on basename, not path (2.534024ms)
+✔ a file already applied from another directory does not re-apply (0.71063ms)
+✔ pending migrations are returned in name order (40.017118ms)
+✔ non-.sql entries are dropped (readdir also yields the auth/ directory) (0.305831ms)
+✔ the auth schema ships outside the globbed directory (0.625942ms)
+✔ this workspace's auth schema copy is byte-identical to its source (0.185789ms)
+✔ the copy check reads both files and catches an edit (0.640674ms)
+✔ parsePreviewArgs accepts the two actions (2.522377ms)
+✔ parsePreviewArgs rejects missing, unknown and extra arguments (0.389266ms)
+✔ parsePid reads a pidfile and rejects junk (0.169786ms)
+✔ parsePgid reads the pgrp field past a comm containing spaces (0.217107ms)
+✔ parseListenerInodes picks LISTEN sockets on the wanted port only (0.533583ms)
+✔ parseListenerInodes reads the tcp6 dump the same way (0.168203ms)
+✔ looksLikePreviewProcess matches the npm wrapper and its vite child (0.466993ms)
+✔ looksLikePreviewProcess spares the sibling scripts and re-used pids (0.23245ms)
+✔ previewOwners trusts port owners and dedupes the pidfile pid (0.152539ms)
+✔ previewOwners adds a pidfile pid whose command line is still the preview (0.220883ms)
+✔ previewOwners drops a stale pidfile pid re-used by another process (0.188394ms)
+✔ previewOwners drops a pidfile pid that no longer exists (0.109204ms)
+✔ previewOwners on a free port with no pidfile signals nothing (0.083996ms)
+✔ stopOutcome fails when a pid survives or the port is still held (3.417323ms)
+✔ stopOutcome reports a verified free port (0.178368ms)
+✔ stopOutcome fails on a listener whose owner cannot be attributed (0.191208ms)
+✔ terminatePids SIGTERMs live pids and skips dead ones (0.314323ms)
+✔ terminatePids escalates to SIGKILL when SIGTERM is ignored (0.248183ms)
+✔ terminatePids reports a pid that survives SIGKILL as stubborn (0.433092ms)
+✔ terminatePids on a free port signals nothing (0.107371ms)
+✔ preview: a successful sign-out clears the token, then redirects (3.643373ms)
+✔ preview: a rejected sign-out still clears the token and redirects (0.37261ms)
+✔ preview: a sign-out that throws synchronously still clears and redirects (0.391319ms)
+✔ preview: a sign-out that never settles clears and redirects once the wait expires (11.885207ms)
+✔ preview: no bearer means nothing to invalidate, so no request is made (0.510838ms)
+✔ preview: a stored bearer is still invalidated server-side (0.225349ms)
+✔ deployed: a confirmed sign-out clears the token, then redirects (31.353179ms)
+✔ deployed: a sign-out that never settles throws and does NOT redirect (21.041118ms)
+✔ deployed: a rejected sign-out throws and does NOT redirect (3.337613ms)
+✔ deployed: the timeout is distinguishable from a rejection (20.399652ms)
+✔ settleWithin reports the outcome and never rejects (20.858893ms)
+✔ settleWithin waits its full window, then gives up rather than hanging (0.862218ms)
+✔ pre-sign-in: the preview clear gives up at the preview bound (0.683699ms)
+✔ pre-sign-in: a deployed session gets the deployed window, not the preview one (1.466027ms)
+✔ pre-sign-in: a failed clear never blocks sign-in (0.44517ms)
+✔ pre-sign-in: the preview skips the request when there is no bearer (0.164197ms)
+✔ every sign-out bound comes from one rule (0.091568ms)
+✔ the defaults are bounded, and deployed waits longer than preview (0.381684ms)
+✔ keeps VITE_-prefixed string entries (1.291664ms)
+✔ drops non-VITE keys, non-string values and malformed documents (0.182445ms)
+✔ a missing app-env.json is a clean no-op (0.329566ms)
+✔ reads the app env from a workspace (0.208033ms)
+✔ an explicit process-env override wins over the file (0.151378ms)
+✔ the template ships auth off (0.153742ms)
+✔ vite loadEnv resolves the wrapped value (0.211138ms)
+✔ the wrapped command runs with the app env applied (182.129543ms)
+✔ the wrapped command sees an explicit override, not the file value (277.64671ms)
+✔ the wrapper propagates the command's exit code (197.412516ms)
+✔ a signal-killed command is never reported as success (221.115018ms)
+✔ the CLI still runs when invoked through a symlinked path (286.133889ms)
+✔ parseWriteAtomicArgs needs exactly a staged file and a target (7.134448ms)
+✔ stagingError refuses a temp inside public/ and a no-op move (0.281063ms)
+✔ handOver replaces the target and clears the staged file (8.136155ms)
+✔ handOver creates a missing target directory (0.360432ms)
+✔ an interrupted pass leaves the target on its old bytes, temp-free (1.167367ms)
+✔ a failed hand-over creates no directory for the target it never wrote (0.254514ms)
+✔ a staged file on another filesystem is refused, not copied (0.443348ms)
+✔ cli: hands the file over, and refuses a temp staged in public/ (324.11643ms)
+✔ cli: relative paths follow the script's root, not the caller's cwd (256.100634ms)
+✔ every hand-over the og skill prints is one this script accepts (9.516342ms)
+✔ cli: a missing staged file fails without touching the target (182.695495ms)
+ℹ tests 195
+ℹ suites 0
+ℹ pass 189
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4277.199504
+
+✖ failing tests:
+
+test at scripts/grok-pwa-plugin.test.mjs:105:1
+✖ platform chrome overwrites share-card metas and always sets og:title (1.28886ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /property="og:title" content="Hello World"/. Input:
+  
+  '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><title>Hello World</title><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head></html>'
+  
+      at TestContext.<anonymous> (file:///workspace/grok-workspace/scripts/grok-pwa-plugin.test.mjs:110:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><title>Hello World</title><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head></html>',
+    expected: /property="og:title" content="Hello World"/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at scripts/grok-pwa-plugin.test.mjs:246:1
+✖ published grok.me slug is still a title fallback (0.639963ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /property="og:title" content="Wild Race"/. Input:
+  
+  '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><meta property="og:image" content="https://og.grok.me/v1/card.png?host=wild-race.grok.me&amp;title=%E8%A1%A1%E7%AD%96%20Hengce&amp;color=1F4D45"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head></html>'
+  
+      at TestContext.<anonymous> (file:///workspace/grok-workspace/scripts/grok-pwa-plugin.test.mjs:250:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><meta property="og:image" content="https://og.grok.me/v1/card.png?host=wild-race.grok.me&amp;title=%E8%A1%A1%E7%AD%96%20Hengce&amp;color=1F4D45"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head></html>',
+    expected: /property="og:title" content="Wild Race"/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at scripts/grok-pwa-plugin.test.mjs:349:1
+✖ document title entities are not double-escaped on og:title (0.264277ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /property="og:title" content="Cats &amp; Dogs"/. Input:
+  
+  '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><title>Cats &amp; Dogs</title><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head></html>'
+  
+      at TestContext.<anonymous> (file:///workspace/grok-workspace/scripts/grok-pwa-plugin.test.mjs:353:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><title>Cats &amp; Dogs</title><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head></html>',
+    expected: /property="og:title" content="Cats &amp; Dogs"/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at scripts/grok-pwa-plugin.test.mjs:365:1
+✖ injects into documents with no head element (0.463197ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /property="og:title" content="Solo"/. Input:
+  
+  '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head><body>hi</body></html>'
+  
+      at TestContext.<anonymous> (file:///workspace/grok-workspace/scripts/grok-pwa-plugin.test.mjs:368:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head><body>hi</body></html>',
+    expected: /property="og:title" content="Solo"/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at scripts/grok-pwa-plugin.test.mjs:372:1
+✖ streaming injector matches </HEAD> case-insensitively (1.261579ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /property="og:title" content="x"/. Input:
+  
+  '<html><HEAD><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><title>x</title><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head><body>hello</body></html>'
+  
+      at TestContext.<anonymous> (file:///workspace/grok-workspace/scripts/grok-pwa-plugin.test.mjs:379:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<html><HEAD><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><title>x</title><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head><body>hello</body></html>',
+    expected: /property="og:title" content="x"/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at scripts/grok-pwa-plugin.test.mjs:397:1
+✖ uses the app name in the injected title tag (0.269605ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /apple-mobile-web-app-title" content="Wild Race"/. Input:
+  
+  '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head></html>'
+  
+      at TestContext.<anonymous> (file:///workspace/grok-workspace/scripts/grok-pwa-plugin.test.mjs:399:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<html><head><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="衡策 Hengce"><link rel="manifest" href="/__grok/manifest.webmanifest"><link rel="apple-touch-icon" href="/__grok/icon-180.png"><meta name="apple-mobile-web-app-title" content="衡策 Hengce"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="theme-color" content="#000000"><script src="https://grok.com/grok-app-builder/extensions.js" defer></script></head></html>',
+    expected: /apple-mobile-web-app-title" content="Wild Race"/,
+    operator: 'match',
+    diff: 'simple'
+  }

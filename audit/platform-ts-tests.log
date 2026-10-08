@@ -1,0 +1,95 @@
+▶ callTool failure memo
+  ✔ replays an identical failure within the memo window without refetching (4.652534ms)
+  ✔ keys by token identity so a reminted token shares the memo entry (0.971012ms)
+  ✔ sweeps expired entries on write so unique keys do not accumulate (1.484455ms)
+  ✔ never memoizes login-required 401s (1.236923ms)
+✔ callTool failure memo (9.417157ms)
+▶ callTool in the workspace preview vs deployed
+  ✔ returns pending (no loginRequired) when the preview has no token yet (0.929058ms)
+  ✔ returns a plain error (no sign-in CTA) when a deployed app has no token (0.337448ms)
+  ✔ treats a gate 401 in the preview as pending and parks the rejected token (0.765522ms)
+  ✔ keeps loginRequired for a gate 401 on a deployed app (0.725072ms)
+✔ callTool in the workspace preview vs deployed (3.05521ms)
+▶ callTool
+  ✔ resolves ok:false for non-serializable args instead of rejecting (0.345741ms)
+✔ callTool (0.438911ms)
+▶ isLoginRequired
+  ✔ is true only for login-required failures (0.251919ms)
+✔ isLoginRequired (0.326661ms)
+▶ redirectToLoginIfRequired
+  ✔ no-ops when login is not required (0.409557ms)
+  ✔ navigates to the server-built loginUrl in the browser (0.125809ms)
+  ✔ opens a new tab instead of navigating when framed (0.124297ms)
+  ✔ falls back to navigation when framed and the popup is blocked (0.098909ms)
+  ✔ returns false when the result has no loginUrl (0.07987ms)
+  ✔ returns false on the server (no window) (0.087592ms)
+✔ redirectToLoginIfRequired (1.128829ms)
+▶ GoogleCalendarTools
+  ✔ does not expose a list_events name (0.101212ms)
+✔ GoogleCalendarTools (0.153171ms)
+▶ classifyCallToolError
+  ✔ returns null for successful results (0.14638ms)
+  ✔ classifies a pending preview token as pending before any other kind (0.129455ms)
+  ✔ classifies a deployed missing token as error, not a login CTA (0.07946ms)
+  ✔ classifies gate loginRequired without a missing-token message as login (0.086841ms)
+  ✔ classifies not_connected and failed_precondition (0.362806ms)
+  ✔ classifies scope_denied without claiming a missing grant (0.207662ms)
+  ✔ classifies access_denied (0.082734ms)
+  ✔ falls back to a generic error with the raw message (0.167382ms)
+✔ classifyCallToolError (1.556604ms)
+▶ readinessProbeDelayMs
+  ✔ backs off through the schedule and then holds the last delay (1.349562ms)
+  ✔ clamps a negative attempt to the first delay (0.235965ms)
+✔ readinessProbeDelayMs (2.865053ms)
+▶ readinessProbeExhausted
+  ✔ gives up only once the total wait budget has elapsed (0.282175ms)
+✔ readinessProbeExhausted (0.443347ms)
+▶ verifyGateIdentityToken
+  ✔ returns the identity for a valid token (12.40119ms)
+  ✔ omits optional claims as nulls (2.491892ms)
+  ✔ rejects a wrong audience (2.363809ms)
+  ✔ rejects a wrong issuer (2.032841ms)
+  ✔ rejects an expired token (1.622543ms)
+  ✔ rejects a token without exp (3.178906ms)
+  ✔ rejects a token signed by a different key with the same kid (1.538466ms)
+  ✔ refetches the JWKS when the kid rotates (2.820907ms)
+✔ verifyGateIdentityToken (29.981918ms)
+▶ gateIdentityFromHeaders
+  ✔ verifies the header token end to end and fails closed without it (22.595768ms)
+  ✔ activates on a deployed-shaped request without GROK_GATE_ORIGIN (1.603163ms)
+  ✔ verifies a preview-audience token with no gate env vars via the loopback default (1.064383ms)
+  ✔ rejects a wrong-issuer token in the loopback default mode (1.525127ms)
+  ✔ verifies a preview-audience token when only GROK_GATE_ORIGIN is set (3.270484ms)
+  ✔ rejects a preview-audience token when GROK_PROJECT_ID is set (0.904342ms)
+  ✔ rejects an app-audience token in preview mode (1.166185ms)
+✔ gateIdentityFromHeaders (33.134635ms)
+▶ gateIdentityEnabled
+  ✔ is enabled by default with no gate env vars (0.096124ms)
+  ✔ is disabled when VITE_AUTH_ENABLED is false (0.078599ms)
+✔ gateIdentityEnabled (0.276106ms)
+▶ gateTokenAudience
+  ✔ pins app:<id> when GROK_PROJECT_ID is set, even alongside GROK_GATE_ORIGIN (0.131638ms)
+  ✔ pins preview when GROK_PROJECT_ID is unset (0.064046ms)
+✔ gateTokenAudience (0.319831ms)
+▶ gateIdentityUserInfo
+  ✔ falls back to a synthetic email and name for sub-only claims (0.114773ms)
+  ✔ keeps real claims, lowercasing the email and marking it verified (0.111368ms)
+✔ gateIdentityUserInfo (0.295355ms)
+▶ sessionBoundToGateIdentity
+  ✔ keeps the session when it is bound to the same gate sub (0.145178ms)
+  ✔ rotates when the session belongs to a different gate sub (0.054913ms)
+  ✔ rotates when the session user has no gate-bound account (0.047531ms)
+✔ sessionBoundToGateIdentity (0.321083ms)
+▶ resolveSignInGateState
+  ✔ is pending while the session check is in flight, user or not (0.565411ms)
+  ✔ is signed_in once a user is present (0.107151ms)
+  ✔ is signed_out only after the check resolved with no user (0.091218ms)
+✔ resolveSignInGateState (1.625147ms)
+ℹ tests 55
+ℹ suites 16
+ℹ pass 55
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1111.618788

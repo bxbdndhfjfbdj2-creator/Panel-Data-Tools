@@ -1,0 +1,23 @@
+
+> lint
+> eslint .
+
+
+/workspace/grok-workspace/src/lib/app-data/client.server.ts
+  281:13  error  Empty block statement  no-empty
+
+/workspace/grok-workspace/src/lib/auth/use-current-user.ts
+  59:3  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/rules-of-hooks')
+
+/workspace/grok-workspace/src/lib/construct.ts
+  279:43  error    Unnecessary escape character: \-                                     no-useless-escape
+  518:26  warning  'i' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/workspace/grok-workspace/src/lib/engine.ts
+  49:3  warning  'kendallW' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  51:3  warning  'median' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  54:3  warning  'trimmedMean' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 7 problems (2 errors, 5 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

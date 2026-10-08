@@ -1,0 +1,254 @@
+[
+  {
+    "kind": "panel",
+    "width": 1280,
+    "step": "01",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "heading": "省级发展质量面板",
+    "nTables": 2,
+    "textLen": 1897,
+    "screenshot": "/workspace/screenshots/audit-panel-1280-01.png"
+  },
+  {
+    "kind": "panel",
+    "width": 1280,
+    "step": "02",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "heading": "指标筛选",
+    "nTables": 2,
+    "textLen": 2271,
+    "screenshot": "/workspace/screenshots/audit-panel-1280-02.png"
+  },
+  {
+    "kind": "panel",
+    "width": 1280,
+    "step": "03",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "nTables": 0,
+    "textLen": 1395,
+    "screenshot": "/workspace/screenshots/audit-panel-1280-03.png"
+  },
+  {
+    "kind": "panel",
+    "width": 1280,
+    "step": "04",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "heading": "聚合方法",
+    "nTables": 1,
+    "textLen": 978,
+    "screenshot": "/workspace/screenshots/audit-panel-1280-04.png"
+  },
+  {
+    "kind": "panel",
+    "width": 1280,
+    "step": "05",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "heading": "发展质量综合指数",
+    "nTables": 3,
+    "textLen": 2136,
+    "screenshot": "/workspace/screenshots/audit-panel-1280-05.png"
+  },
+  {
+    "kind": "survey",
+    "width": 1280,
+    "step": "01",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "heading": "组织健康问卷",
+    "nTables": 2,
+    "textLen": 1521,
+    "screenshot": "/workspace/screenshots/audit-survey-1280-01.png"
+  },
+  {
+    "kind": "survey",
+    "width": 1280,
+    "step": "02",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "heading": "指标筛选",
+    "nTables": 2,
+    "textLen": 3935,
+    "screenshot": "/workspace/screenshots/audit-survey-1280-02.png"
+  },
+  {
+    "kind": "survey",
+    "width": 1280,
+    "step": "03",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "nTables": 0,
+    "textLen": 1804,
+    "screenshot": "/workspace/screenshots/audit-survey-1280-03.png"
+  },
+  {
+    "kind": "survey",
+    "width": 1280,
+    "step": "04",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "heading": "聚合方法",
+    "nTables": 1,
+    "textLen": 1201,
+    "screenshot": "/workspace/screenshots/audit-survey-1280-04.png"
+  },
+  {
+    "kind": "survey",
+    "width": 1280,
+    "step": "05",
+    "overflow": false,
+    "scrollWidth": 1280,
+    "heading": "组织健康指数",
+    "nTables": 3,
+    "textLen": 6418,
+    "screenshot": "/workspace/screenshots/audit-survey-1280-05.png"
+  },
+  {
+    "id": "workspace-export-import",
+    "dialogClosed": true,
+    "toastText": [
+      "已导入方案",
+      "已导出方案 JSON"
+    ],
+    "rawFileHasBOM": true,
+    "blobText": {
+      "startsWithBOM": false,
+      "parsed": {}
+    }
+  },
+  {
+    "id": "save-quota-ui",
+    "restoreButtonText": "恢复上次（2026/10/8 08:44:13）",
+    "toastText": [
+      "已导入方案",
+      "已导出方案 JSON"
+    ]
+  },
+  {
+    "id": "ahp-left-end",
+    "sliderValue": "-8",
+    "table": "准则\tAHP 权重\t当前权重\n工作投入\t10.0%\t25.0%\n领导支持\t90.0%\t25.0%"
+  },
+  {
+    "id": "browser-errors",
+    "width": 1280,
+    "errors": []
+  },
+  {
+    "kind": "panel",
+    "width": 390,
+    "step": "01",
+    "overflow": false,
+    "scrollWidth": 390,
+    "heading": "省级发展质量面板",
+    "nTables": 2,
+    "textLen": 1897,
+    "screenshot": "/workspace/screenshots/audit-panel-390-01.png"
+  },
+  {
+    "kind": "panel",
+    "width": 390,
+    "step": "02",
+    "overflow": false,
+    "scrollWidth": 390,
+    "heading": "指标筛选",
+    "nTables": 2,
+    "textLen": 2271,
+    "screenshot": "/workspace/screenshots/audit-panel-390-02.png"
+  },
+  {
+    "kind": "panel",
+    "width": 390,
+    "step": "03",
+    "overflow": false,
+    "scrollWidth": 390,
+    "nTables": 0,
+    "textLen": 1395,
+    "screenshot": "/workspace/screenshots/audit-panel-390-03.png"
+  },
+  {
+    "kind": "panel",
+    "width": 390,
+    "step": "04",
+    "overflow": false,
+    "scrollWidth": 390,
+    "heading": "聚合方法",
+    "nTables": 1,
+    "textLen": 978,
+    "screenshot": "/workspace/screenshots/audit-panel-390-04.png"
+  },
+  {
+    "kind": "panel",
+    "width": 390,
+    "step": "05",
+    "overflow": false,
+    "scrollWidth": 390,
+    "heading": "发展质量综合指数",
+    "nTables": 3,
+    "textLen": 2003,
+    "screenshot": "/workspace/screenshots/audit-panel-390-05.png"
+  },
+  {
+    "kind": "survey",
+    "width": 390,
+    "step": "01",
+    "overflow": false,
+    "scrollWidth": 390,
+    "heading": "组织健康问卷",
+    "nTables": 2,
+    "textLen": 1521,
+    "screenshot": "/workspace/screenshots/audit-survey-390-01.png"
+  },
+  {
+    "kind": "survey",
+    "width": 390,
+    "step": "02",
+    "overflow": false,
+    "scrollWidth": 390,
+    "heading": "指标筛选",
+    "nTables": 2,
+    "textLen": 3935,
+    "screenshot": "/workspace/screenshots/audit-survey-390-02.png"
+  },
+  {
+    "kind": "survey",
+    "width": 390,
+    "step": "03",
+    "overflow": false,
+    "scrollWidth": 390,
+    "nTables": 0,
+    "textLen": 1804,
+    "screenshot": "/workspace/screenshots/audit-survey-390-03.png"
+  },
+  {
+    "kind": "survey",
+    "width": 390,
+    "step": "04",
+    "overflow": false,
+    "scrollWidth": 390,
+    "heading": "聚合方法",
+    "nTables": 1,
+    "textLen": 1201,
+    "screenshot": "/workspace/screenshots/audit-survey-390-04.png"
+  },
+  {
+    "kind": "survey",
+    "width": 390,
+    "step": "05",
+    "overflow": false,
+    "scrollWidth": 390,
+    "heading": "组织健康指数",
+    "nTables": 3,
+    "textLen": 5645,
+    "screenshot": "/workspace/screenshots/audit-survey-390-05.png"
+  },
+  {
+    "id": "browser-errors",
+    "width": 390,
+    "errors": []
+  }
+]

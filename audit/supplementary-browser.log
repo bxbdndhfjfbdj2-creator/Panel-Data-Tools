@@ -1,0 +1,9 @@
+[
+  {
+    id: 'quota-feedback',
+    savedAtInStorage: 1791449397581,
+    restoreLabel: '恢复上次（2026/10/8 08:49:58）',
+    failedWriteCount: 1,
+    errorNotifications: []
+  }
+]

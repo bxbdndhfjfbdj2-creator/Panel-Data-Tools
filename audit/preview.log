@@ -1,0 +1,6 @@
+
+> preview:restart
+> node scripts/preview.mjs restart
+
+[preview] nothing was listening on 8081
+[preview] serving http://127.0.0.1:8081/ (pid 1204, log /workspace/grok-workspace/.grok/preview.log)

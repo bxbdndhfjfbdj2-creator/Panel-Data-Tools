@@ -1,0 +1,395 @@
+{
+  "timestamp": "2026-10-08T09:00:44.562Z",
+  "node": "v24.19.0",
+  "contract": "Bounded software audit cases; no population inference or proof of all inputs",
+  "cases": [
+    {
+      "id": "varimax-objective",
+      "input": [
+        [
+          0.9,
+          0.1
+        ],
+        [
+          0.8,
+          0.2
+        ],
+        [
+          0.7,
+          0.3
+        ],
+        [
+          0.1,
+          0.8
+        ]
+      ],
+      "before": 0.6225749999999999,
+      "after": 0.5843409396447398,
+      "gridBest": 0.6258154648701655,
+      "angle": 0.03707079331235952,
+      "gridPoints": 20001,
+      "expected": "rotation should not decrease the unnormalized gamma=1 varimax objective"
+    },
+    {
+      "id": "stata-tag-in-string-117",
+      "version": 117,
+      "error": "dta 数据区不完整。",
+      "fixture": "pandas 2.2.3 to_stata; 3 rows, one note contains literal </data>"
+    },
+    {
+      "id": "stata-tag-in-string-118",
+      "version": 118,
+      "error": "dta 数据区不完整。",
+      "fixture": "pandas 2.2.3 to_stata; 3 rows, one note contains literal </data>"
+    },
+    {
+      "id": "stata-tag-in-string-119",
+      "version": 119,
+      "error": "dta 数据区不完整。",
+      "fixture": "pandas 2.2.3 to_stata; 3 rows, one note contains literal </data>"
+    },
+    {
+      "id": "stata-strl",
+      "actual": [
+        null,
+        null
+      ],
+      "expectedLengths": [
+        2100,
+        2100
+      ]
+    },
+    {
+      "id": "aggregation-equal",
+      "actualFirst": 33.33333333333333,
+      "expectedFirst": 33.333333333333336
+    },
+    {
+      "id": "aggregation-median",
+      "actualFirst": 33.33333333333333,
+      "expectedFirst": 0
+    },
+    {
+      "id": "aggregation-trimmed",
+      "actualFirst": 33.33333333333333,
+      "expectedFirst": 33.333333333333336
+    },
+    {
+      "id": "trimmed-10-items",
+      "actualFirst": 10,
+      "expectedFirst": 0
+    },
+    {
+      "id": "topsis-missing-mode",
+      "noMissingValues": true,
+      "listwise": 45.151774455479895,
+      "pairwise": 37.17949628632905,
+      "pairwiseCloseness": 37.17949628632905,
+      "expectedInvariant": "same TOPSIS scores for complete data; closeness in [0,1]"
+    },
+    {
+      "id": "topsis-zscore-dimensions",
+      "dims": [
+        -23.734623882875283,
+        39.84029296800489,
+        8.0528345425648,
+        -28.184920898976806,
+        44.290589984106404,
+        -40.264172712824006
+      ],
+      "expectedConvention": "document and consistently scale dimensions"
+    },
+    {
+      "id": "zscore-contributions",
+      "displayedComposite": 39.2558314202566,
+      "sumContributions": -0.3581389526581134
+    },
+    {
+      "id": "negative-values-lost",
+      "kind": "panel",
+      "actual": [
+        null,
+        2,
+        null,
+        4,
+        5,
+        6
+      ],
+      "expected": [
+        -1,
+        2,
+        -3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "97-value-lost",
+      "actual": [
+        1,
+        2,
+        null,
+        4
+      ],
+      "expected": [
+        1,
+        2,
+        97,
+        4
+      ]
+    },
+    {
+      "id": "tsv",
+      "columns": [
+        "id\tx\ty"
+      ],
+      "indicators": 0,
+      "expectedColumns": [
+        "id",
+        "x",
+        "y"
+      ]
+    },
+    {
+      "id": "duplicate-header",
+      "actual": [
+        {
+          "id": "A",
+          "x": 2
+        },
+        {
+          "id": "B",
+          "x": 4
+        }
+      ],
+      "indicatorKeys": [
+        "x",
+        "x"
+      ],
+      "expected": "preserve both x columns using unique names"
+    },
+    {
+      "id": "identifier-coercion",
+      "actual": [
+        1,
+        2
+      ],
+      "expected": [
+        "001",
+        "002"
+      ]
+    },
+    {
+      "id": "sparse-column-inaccessible",
+      "catalog": [
+        "y"
+      ],
+      "expectedCandidate": "x (50% observed), user decides via missing threshold"
+    },
+    {
+      "id": "value-label-rewrites-number",
+      "actual": [
+        {
+          "id": "A"
+        },
+        {
+          "id": "B"
+        },
+        {
+          "id": "C"
+        }
+      ],
+      "indicators": [],
+      "expected": "preserve numeric codes separately from display labels"
+    },
+    {
+      "id": "workspace-validation",
+      "acceptedMalformed": true
+    },
+    {
+      "id": "json-direct-bom-parser",
+      "error": "Unexpected token '﻿', \"﻿{\"v\":1,\"d\"... is not valid JSON",
+      "browserExportPrefixesBOM": true,
+      "caveat": "Browser File.text strips BOM; browser round-trip succeeds. This is not an app defect."
+    },
+    {
+      "id": "save-error-swallowed",
+      "writeReturned": null,
+      "expected": "failure result surfaced to UI"
+    },
+    {
+      "id": "ahp-direction",
+      "uiMinusEnd": "左侧更重要",
+      "minusValue": 0.1111111111111111,
+      "minusWeights": [
+        0.09999999999999999,
+        0.8999999999999999
+      ],
+      "expectedLeftHigher": true
+    },
+    {
+      "id": "eigen-12",
+      "n": 12,
+      "actualLargest": 6.499999999999998,
+      "expectedLargest": 6.5,
+      "eigenpairResidual": 1.6764000044290905e-15
+    },
+    {
+      "id": "eigen-24",
+      "n": 24,
+      "actualLargest": 12.5,
+      "expectedLargest": 12.5,
+      "eigenpairResidual": 3.635026844804856e-15
+    },
+    {
+      "id": "eigen-60",
+      "n": 60,
+      "actualLargest": 30.499999999999964,
+      "expectedLargest": 30.5,
+      "eigenpairResidual": 5.7617045259162e-14
+    },
+    {
+      "id": "eigen-80",
+      "n": 80,
+      "actualLargest": 40.499999999999986,
+      "expectedLargest": 40.5,
+      "eigenpairResidual": 5.3813644952431296e-14
+    },
+    {
+      "id": "dense-eigen-12",
+      "n": 12,
+      "seed": 1949,
+      "actualLargest": 1.9082877950319,
+      "referenceLargest": 1.9084836025556553,
+      "eigenpairResidual": 0.01180406171862753,
+      "benchmark": "orthogonal invariant Rv=lambda*v; 16000 rotations only as a comparison"
+    },
+    {
+      "id": "dense-eigen-24",
+      "n": 24,
+      "seed": 1949,
+      "actualLargest": 2.3474794787193423,
+      "referenceLargest": 2.4100520499681117,
+      "eigenpairResidual": 0.26522451863897756,
+      "benchmark": "orthogonal invariant Rv=lambda*v; 16000 rotations only as a comparison"
+    },
+    {
+      "id": "dense-eigen-60",
+      "n": 60,
+      "seed": 1949,
+      "actualLargest": 3.2200500905952696,
+      "referenceLargest": 3.8566973199180503,
+      "eigenpairResidual": 0.971640631919378,
+      "benchmark": "orthogonal invariant Rv=lambda*v; 16000 rotations only as a comparison"
+    },
+    {
+      "id": "dense-eigen-80",
+      "n": 80,
+      "seed": 1949,
+      "actualLargest": 4.13744960080985,
+      "referenceLargest": 4.9178805485375685,
+      "eigenpairResidual": 1.3450746130877587,
+      "benchmark": "orthogonal invariant Rv=lambda*v; 16000 rotations only as a comparison"
+    },
+    {
+      "id": "wide-screen-silent-skip",
+      "nIndicators": 49,
+      "firstMaxCorr": null,
+      "firstVif": null,
+      "expectedCorrelation": 1
+    },
+    {
+      "id": "singular-pruning-order",
+      "matrix": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          1
+        ],
+        [
+          0,
+          1,
+          1,
+          1
+        ],
+        [
+          0,
+          1,
+          1,
+          1
+        ]
+      ],
+      "result": {
+        "keep": [
+          2,
+          3
+        ],
+        "drop": [
+          0,
+          1
+        ]
+      },
+      "independentItem": 0,
+      "expected": "independent item 0 must stay"
+    },
+    {
+      "id": "large-topsis",
+      "n": 150000,
+      "error": "Maximum call stack size exceeded",
+      "stataImportLimit": 250000
+    },
+    {
+      "id": "missing-year-zero",
+      "years": [
+        0,
+        2024
+      ],
+      "expected": [
+        2024
+      ]
+    },
+    {
+      "id": "unassigned-still-selected",
+      "indicator": {
+        "key": "q0",
+        "name": "q0",
+        "direction": 1,
+        "dimensionId": null,
+        "selected": true,
+        "weight": 0.3333333333333333
+      },
+      "actuallyScored": {
+        "q1": 0,
+        "q2": 100
+      }
+    },
+    {
+      "id": "construct-uncheck-not-deselected",
+      "excludedItem": {
+        "key": "q2",
+        "name": "q2",
+        "direction": 1,
+        "dimensionId": null,
+        "selected": true,
+        "weight": 0.3333333333333333
+      }
+    },
+    {
+      "id": "zero-weights-with-empty-dim",
+      "normalized": {
+        "d": 0.5,
+        "empty": 0.5
+      },
+      "actualScore": 16.666666666666664,
+      "expected": "reject zero vector or normalize active dimensions only"
+    }
+  ]
+}

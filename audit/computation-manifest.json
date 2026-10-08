@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "claim_id": "hengce-bounded-software-and-numerical-review-2026-10-08",
+  "repository": {
+    "commit": "unavailable",
+    "dirty": true,
+    "archive_sha256": "1252f51519131a35bc2e4d2a83485c7a979603986cc3cba59cf013f468692a70",
+    "note": "Uploaded archive, no repository revision. Added audit artifacts and generated runtime files; original business source unchanged."
+  },
+  "command": [
+    "node",
+    "--experimental-strip-types",
+    "--import",
+    "./audit/resolve-ts.mjs",
+    "audit/reproduce.mjs"
+  ],
+  "environment": {
+    "software": [
+      {
+        "name": "node",
+        "version": "v24.19.0"
+      },
+      {
+        "name": "npm",
+        "version": "11.9.0"
+      },
+      {
+        "name": "python",
+        "version": "3.12.14"
+      },
+      {
+        "name": "typescript",
+        "version": "5.9.3"
+      }
+    ],
+    "hardware": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "fixture_generator": "pandas 2.2.3; fixtures already included"
+  },
+  "mathematics": {
+    "assertion_tested": "Bounded counterexamples for value preservation, method invariance, AHP direction, eigenpair residual, unnormalized gamma=1 Varimax objective, singular pruning and state validation.",
+    "coefficient_domain": "JavaScript IEEE-754 binary64; finite synthetic real inputs, no exact symbolic arithmetic.",
+    "conventions": "Eigenvectors stored as rows; Rv=lambda*v residual Euclidean norm; seeded Gram-normalized PSD matrices; TOPSIS complete-data missing-policy invariance; Varimax angular grid is comparison, not an exact optimum proof.",
+    "inputs": [
+      {
+        "path": "src/lib/ahp.ts",
+        "sha256_before": "bc04bbeb202690ec8acc42c528872dec15fad6a86928625e69558415c1569b19",
+        "sha256_after": "bc04bbeb202690ec8acc42c528872dec15fad6a86928625e69558415c1569b19"
+      },
+      {
+        "path": "src/lib/catalog.ts",
+        "sha256_before": "d6d2f58dcd9bc28ff8c75ba67bfcfd51c5ebcebfacb4f0a1914115c5fd872a9d",
+        "sha256_after": "d6d2f58dcd9bc28ff8c75ba67bfcfd51c5ebcebfacb4f0a1914115c5fd872a9d"
+      },
+      {
+        "path": "src/lib/construct.test.ts",
+        "sha256_before": "9becbd294bc50b5c955c1a49325fcae7316d0f1ff217c21ee52ec10c1974033e",
+        "sha256_after": "9becbd294bc50b5c955c1a49325fcae7316d0f1ff217c21ee52ec10c1974033e"
+      },
+      {
+        "path": "src/lib/construct.ts",
+        "sha256_before": "184b9984809a82f919ff13627eb71ab3b8c70dd0217750200548b2fe388a4e24",
+        "sha256_after": "184b9984809a82f919ff13627eb71ab3b8c70dd0217750200548b2fe388a4e24"
+      },
+      {
+        "path": "src/lib/csv.ts",
+        "sha256_before": "b0fb40969cc8dc92dfe22ba1dd7014d56db1542cbe9b5fa4f3016dd0c059dcec",
+        "sha256_after": "b0fb40969cc8dc92dfe22ba1dd7014d56db1542cbe9b5fa4f3016dd0c059dcec"
+      },
+      {
+        "path": "src/lib/datasets.ts",
+        "sha256_before": "542f3c7894b9f1b58f7e49397313fbc4b9d13048abb00321c9be790ec49a2a9c",
+        "sha256_after": "542f3c7894b9f1b58f7e49397313fbc4b9d13048abb00321c9be790ec49a2a9c"
+      },
+      {
+        "path": "src/lib/db.ts",
+        "sha256_before": "8decf7689ff4833ad2f6f263eff9041dd2a68ce923824fa1d55ad620dea72e49",
+        "sha256_after": "8decf7689ff4833ad2f6f263eff9041dd2a68ce923824fa1d55ad620dea72e49"
+      },
+      {
+        "path": "src/lib/diagnose.test.ts",
+        "sha256_before": "6e5ce873a96498d8db1b4e6211ce512855c627e462cfa0f588812fec093e1645",
+        "sha256_after": "6e5ce873a96498d8db1b4e6211ce512855c627e462cfa0f588812fec093e1645"
+      },
+      {
+        "path": "src/lib/diagnose.ts",
+        "sha256_before": "2c2d6109a647d1822bb7667f9383c25d26cf5d7b48ce7c92900253738ae5f5ea",
+        "sha256_after": "2c2d6109a647d1822bb7667f9383c25d26cf5d7b48ce7c92900253738ae5f5ea"
+      },
+      {
+        "path": "src/lib/dta.ts",
+        "sha256_before": "5eadfc30a19420c7b99282494acb13e4a5a9a7bb00dc17d7d86dab7b9a6fb560",
+        "sha256_after": "5eadfc30a19420c7b99282494acb13e4a5a9a7bb00dc17d7d86dab7b9a6fb560"
+      },
+      {
+        "path": "src/lib/engine.ts",
+        "sha256_before": "eb92bd6c3f672e882f5dbf55ac36462bb51c4241ef4bedb0f94765559b07801e",
+        "sha256_after": "eb92bd6c3f672e882f5dbf55ac36462bb51c4241ef4bedb0f94765559b07801e"
+      },
+      {
+        "path": "src/lib/env.server.ts",
+        "sha256_before": "9b834e0978ae76332a65a05f5bc75f80684db8c6aa638916869385c12e3343d5",
+        "sha256_after": "9b834e0978ae76332a65a05f5bc75f80684db8c6aa638916869385c12e3343d5"
+      },
+      {
+        "path": "src/lib/io.test.ts",
+        "sha256_before": "c9a183cf8bbcfe0b180f6bbc6abc28966aeb5689af794a149807c7b1e20cacb1",
+        "sha256_after": "c9a183cf8bbcfe0b180f6bbc6abc28966aeb5689af794a149807c7b1e20cacb1"
+      },
+      {
+        "path": "src/lib/io.ts",
+        "sha256_before": "0c6813aab2b74868692d153a8fb084e87b6a2316c15339eff0ed5c74e0306eec",
+        "sha256_after": "0c6813aab2b74868692d153a8fb084e87b6a2316c15339eff0ed5c74e0306eec"
+      },
+      {
+        "path": "src/lib/npar.test.ts",
+        "sha256_before": "755853ffea8871739445e4b8883c28008c6ece1e927d236a5eb479777d89eade",
+        "sha256_after": "755853ffea8871739445e4b8883c28008c6ece1e927d236a5eb479777d89eade"
+      },
+      {
+        "path": "src/lib/npar.ts",
+        "sha256_before": "f6e73e6c8eb149c7034b2b793d1d7a1bffb06bcf6c3b8a9a7eb2aa69049df6f8",
+        "sha256_after": "f6e73e6c8eb149c7034b2b793d1d7a1bffb06bcf6c3b8a9a7eb2aa69049df6f8"
+      },
+      {
+        "path": "src/lib/persist.ts",
+        "sha256_before": "e49a0058398a78c67ef4ec4720d7e85aa44c0a45a8e77dc4cd4eef6afce97c78",
+        "sha256_after": "e49a0058398a78c67ef4ec4720d7e85aa44c0a45a8e77dc4cd4eef6afce97c78"
+      },
+      {
+        "path": "src/lib/preview-embedder-origin.ts",
+        "sha256_before": "c2d5e1acc5653ff2abc08a5eeb5feb3331f4e3d7c751ec83d60dee83cf33a6ee",
+        "sha256_after": "c2d5e1acc5653ff2abc08a5eeb5feb3331f4e3d7c751ec83d60dee83cf33a6ee"
+      },
+      {
+        "path": "src/lib/preview-host-bridge.ts",
+        "sha256_before": "63a91311378037680b6be414937295069ec2950520d1dc959741cf430ba6b38b",
+        "sha256_after": "63a91311378037680b6be414937295069ec2950520d1dc959741cf430ba6b38b"
+      },
+      {
+        "path": "src/lib/prng.ts",
+        "sha256_before": "6b530697f3e5d1685e32e6b32a75b6b78a0ac715c000e21d3247c0a5b44b7e12",
+        "sha256_after": "6b530697f3e5d1685e32e6b32a75b6b78a0ac715c000e21d3247c0a5b44b7e12"
+      },
+      {
+        "path": "src/lib/report.ts",
+        "sha256_before": "615de85f98c28ccbf56266f3e2c85f4a16a5cebaa5c95fd10fb132216a8e95e6",
+        "sha256_after": "615de85f98c28ccbf56266f3e2c85f4a16a5cebaa5c95fd10fb132216a8e95e6"
+      },
+      {
+        "path": "src/lib/scripts.ts",
+        "sha256_before": "7638f4203463f6dab099bc286cbdf5d7fd33ad93d836d198e59987c790d7c56d",
+        "sha256_after": "7638f4203463f6dab099bc286cbdf5d7fd33ad93d836d198e59987c790d7c56d"
+      },
+      {
+        "path": "src/lib/slice.ts",
+        "sha256_before": "a7403dd90de57e061fd5cf01f0ca553fe4212322e5b53041913b7e7bba3a13a0",
+        "sha256_after": "a7403dd90de57e061fd5cf01f0ca553fe4212322e5b53041913b7e7bba3a13a0"
+      },
+      {
+        "path": "src/lib/stats.ts",
+        "sha256_before": "42686ac309a5c60e298a4aaa71afaef939c9f8a14bd57ad9d10f45489f12480f",
+        "sha256_after": "42686ac309a5c60e298a4aaa71afaef939c9f8a14bd57ad9d10f45489f12480f"
+      },
+      {
+        "path": "src/lib/store.ts",
+        "sha256_before": "7a172ea54f7b174bf2b96bcaa5a6615ff07280f611f68d229ce59d858afc7a05",
+        "sha256_after": "7a172ea54f7b174bf2b96bcaa5a6615ff07280f611f68d229ce59d858afc7a05"
+      },
+      {
+        "path": "src/lib/transform.ts",
+        "sha256_before": "cfc7c5295c3bdabd2ee9f5bb8f74ff8d0dc775df8cc0695ffe578f1bb31585be",
+        "sha256_after": "cfc7c5295c3bdabd2ee9f5bb8f74ff8d0dc775df8cc0695ffe578f1bb31585be"
+      },
+      {
+        "path": "src/lib/types.ts",
+        "sha256_before": "ef7597191e34c343397c5f721fea3edfc6e0aae6e791219db804eea5f99d31a4",
+        "sha256_after": "ef7597191e34c343397c5f721fea3edfc6e0aae6e791219db804eea5f99d31a4"
+      },
+      {
+        "path": "src/lib/utils.ts",
+        "sha256_before": "c8487a22565fb55d390b1f17ea833b379340c375579e74900d4cec1ab971dbaa",
+        "sha256_after": "c8487a22565fb55d390b1f17ea833b379340c375579e74900d4cec1ab971dbaa"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256_before": "cbe97e1bad970b3d7fa3401300c99fc524c5a1b62a50413d8c0eb458ee13714e",
+        "sha256_after": "cbe97e1bad970b3d7fa3401300c99fc524c5a1b62a50413d8c0eb458ee13714e"
+      },
+      {
+        "path": "audit/reproduce.mjs",
+        "sha256_before": "a62f672a402230ae396d6562472e0f3074fd8abb5fcdb0548275110eb9c568a2",
+        "sha256_after": "a62f672a402230ae396d6562472e0f3074fd8abb5fcdb0548275110eb9c568a2"
+      },
+      {
+        "path": "audit/resolve-ts.mjs",
+        "sha256_before": "a0257ad0890fdcc866099e436fa34342250cf860230c48dc5a7ea81a430d1d4c",
+        "sha256_after": "a0257ad0890fdcc866099e436fa34342250cf860230c48dc5a7ea81a430d1d4c"
+      },
+      {
+        "path": "audit/make-fixtures.py",
+        "sha256_before": "adda515e87453270d5d41f040e4b2f6e92b5c078e53fc16d7cabf7e2092bfb7d",
+        "sha256_after": "adda515e87453270d5d41f040e4b2f6e92b5c078e53fc16d7cabf7e2092bfb7d"
+      },
+      {
+        "path": "audit/run-audit.py",
+        "sha256_before": "9d54bc6a9a22405447f49c6f06da5e49e3974a3d078a7db8a3a64271ce576778",
+        "sha256_after": "9d54bc6a9a22405447f49c6f06da5e49e3974a3d078a7db8a3a64271ce576778"
+      },
+      {
+        "path": "audit/tag-in-string-117.dta",
+        "sha256_before": "d69b71434e5c56eac3ceae20e687845469876db745192c1d228742e12df67e91",
+        "sha256_after": "d69b71434e5c56eac3ceae20e687845469876db745192c1d228742e12df67e91"
+      },
+      {
+        "path": "audit/tag-in-string-118.dta",
+        "sha256_before": "e719d9c1d65e62919795ee5b9778269420c5400577fcb4d16057dd992094e91b",
+        "sha256_after": "e719d9c1d65e62919795ee5b9778269420c5400577fcb4d16057dd992094e91b"
+      },
+      {
+        "path": "audit/tag-in-string-119.dta",
+        "sha256_before": "f8cb1be56c6ff64f30f216ea65e2b5044b2beb75a56ffa4e8f25f17a53a403d6",
+        "sha256_after": "f8cb1be56c6ff64f30f216ea65e2b5044b2beb75a56ffa4e8f25f17a53a403d6"
+      },
+      {
+        "path": "audit/strl.dta",
+        "sha256_before": "d86cbf16575d0966d32e4ce5a34c69342dcaae503497ffcfd951cbcfb991b55b",
+        "sha256_after": "d86cbf16575d0966d32e4ce5a34c69342dcaae503497ffcfd951cbcfb991b55b"
+      }
+    ],
+    "bounds": {
+      "eigen_dimensions": [
+        12,
+        24,
+        60,
+        80
+      ],
+      "dense_gram_samples": 50,
+      "eigen_reference_rotations": 16000,
+      "varimax_grid_points": 20001,
+      "wide_screen_columns": 49,
+      "largest_topsis_rows": 150000,
+      "stata_versions": [
+        117,
+        118,
+        119
+      ],
+      "case_count": 38
+    },
+    "non_claims": [
+      "No proof of correctness for all inputs.",
+      "No population inference, full statistical validation, real deployment, security exploitation or WCAG certification.",
+      "The 16000-rotation comparison uses the same implementation; residual invariants provide the independent check.",
+      "This runner records cases rather than asserting every expected value; zero exit status means execution completed."
+    ]
+  },
+  "randomness": {
+    "used": true,
+    "generator": "src/lib/prng.ts mulberry32 + gauss",
+    "seed": 1949,
+    "stream": "Single stream continued over dimensions 12, 24, 60, 80 in that order."
+  },
+  "run": {
+    "started_at": "2026-10-08T09:00:44.026436+00:00",
+    "runtime_seconds": 0.5691943570000149,
+    "exit_status": 0,
+    "subprocess_timeout_seconds": 60
+  },
+  "outputs": [
+    {
+      "path": "audit/reproductions.json",
+      "sha256": "c6193cf8d8b776d7cc9ba530a6fe56c0ca8c4f6f08f714e7710acf63a01f7600"
+    },
+    {
+      "path": "audit/reproductions.log",
+      "sha256": "e24c523e1936bae445590f09123d2e3a04fbed0d53f27eb1bbd0078707b1581c"
+    }
+  ],
+  "checks": [
+    {
+      "name": "input_hashes_unchanged_during_execution",
+      "passed": true
+    },
+    {
+      "name": "case_count",
+      "observed": 38
+    }
+  ],
+  "result": "Finite audit cases recorded; see report for counterexamples and evidence classification.",
+  "residual_risks": [
+    "Legacy v1 does not enforce resource limits or verify declared input hashes; this runner manually compares them.",
+    "No original Git commit available; archive SHA-256 identifies supplied contents.",
+    "Node 24 tested; Node 22 not independently verified.",
+    "Large-array failure depends on runtime stack/argument limits.",
+    "Uncovered data formats, sizes and methods remain unverified."
+  ]
+}

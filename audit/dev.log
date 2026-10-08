@@ -1,0 +1,20 @@
+
+> dev
+> node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080
+
+
+  VITE v8.2.2  ready in 944 ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: http://172.26.91.249:8080/  eth0
+  ➜  Network: http://172.31.5.126:8080/   eth1
+
+> dev
+> node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080
+
+
+  VITE v8.2.2  ready in 709 ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: http://172.26.91.249:8080/  eth0
+  ➜  Network: http://172.31.5.126:8080/   eth1

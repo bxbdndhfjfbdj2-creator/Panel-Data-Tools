@@ -1,0 +1,103 @@
+
+> build
+> node scripts/with-app-env.mjs vite build && npm run db:migrate
+
+[nitro:vercel] ℹ Using nodejs24.x runtime.
+[nitro:vercel] ℹ Using web entry format.
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 2531 modules transformed.
+rendering chunks...
+computing gzip size...
+.vercel/output/static/assets/styles-7OrPD0cH.css   41.96 kB │ gzip:   8.26 kB
+.vercel/output/static/assets/index-C-hG957l.js    399.68 kB │ gzip: 125.63 kB
+.vercel/output/static/assets/xlsx-BKER4Xe2.js     423.91 kB │ gzip: 141.25 kB
+.vercel/output/static/assets/routes-_Ur6aI1L.js   690.89 kB │ gzip: 197.33 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.90s
+vite v8.2.2 building ssr environment for production...
+transforming...
+✓ 101 modules transformed.
+rendering chunks...
+computing gzip size...
+node_modules/.nitro/vite/services/ssr/assets/styles-7OrPD0cH.css                      41.96 kB │ gzip:  8.26 kB
+node_modules/.nitro/vite/services/ssr/assets/start-5Z2QO8AU.js                         0.14 kB │ gzip:  0.13 kB
+node_modules/.nitro/vite/services/ssr/assets/empty-plugin-adapters-D9UWiqvJ.js         0.22 kB │ gzip:  0.16 kB
+node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-BP7OTwGh.js    0.50 kB │ gzip:  0.29 kB
+node_modules/.nitro/vite/services/ssr/assets/router-DxOzEthd.js                       13.42 kB │ gzip:  4.59 kB
+node_modules/.nitro/vite/services/ssr/index.js                                        69.43 kB │ gzip: 17.70 kB
+node_modules/.nitro/vite/services/ssr/assets/routes-C5rnlM5u.js                      264.02 kB │ gzip: 67.98 kB
+
+✓ built in 702ms
+
+[nitro] ◐ Building [Nitro] (preset: vercel, compatibility: 2026-10-08)
+[nitro] ✔ Generated public .vercel/output/static
+vite v8.2.2 building nitro environment for production...
+transforming...
+✓ 2538 modules transformed.
+ℹ Tracing dependencies:
+- tslib (2.8.1)
+✔ Traced 1 dependencies (4 files) in 85ms.
+ℹ Ensure your production environment matches the builder OS and architecture (linux-x64) to avoid native module issues.
+rendering chunks...
+computing gzip size...
+.vercel/output/functions/__server.func/_ssr/start-5Z2QO8AU.mjs                       0.14 kB │ gzip:   0.13 kB
+.vercel/output/functions/__server.func/_ssr/empty-plugin-adapters-D9UWiqvJ.mjs       0.23 kB │ gzip:   0.16 kB
+.vercel/output/functions/__server.func/_libs/radix-ui__number.mjs                    0.32 kB │ gzip:   0.24 kB
+.vercel/output/functions/__server.func/_tanstack-start-manifest_v-BP7OTwGh.mjs       0.56 kB │ gzip:   0.33 kB
+.vercel/output/functions/__server.func/_libs/radix-ui__react-direction.mjs           0.71 kB │ gzip:   0.39 kB
+.vercel/output/functions/__server.func/_chunks/ssr-renderer.mjs                      0.96 kB │ gzip:   0.49 kB
+.vercel/output/functions/__server.func/_runtime.mjs                                  1.58 kB │ gzip:   0.74 kB
+.vercel/output/functions/__server.func/_libs/react-is.mjs                            1.67 kB │ gzip:   0.65 kB
+.vercel/output/functions/__server.func/_libs/radix-ui__primitive.mjs                 1.83 kB │ gzip:   0.72 kB
+.vercel/output/functions/__server.func/_libs/zustand.mjs                             1.91 kB │ gzip:   0.72 kB
+.vercel/output/functions/__server.func/_libs/prop-types.mjs                          2.27 kB │ gzip:   0.84 kB
+.vercel/output/functions/__server.func/_libs/@radix-ui/react-popper+[...].mjs        2.28 kB │ gzip:   0.88 kB
+.vercel/output/functions/__server.func/_libs/class-variance-authority+clsx.mjs       3.17 kB │ gzip:   1.24 kB
+.vercel/output/functions/__server.func/_libs/d3-path.mjs                             3.25 kB │ gzip:   1.16 kB
+.vercel/output/functions/__server.func/_libs/d3-interpolate.mjs                      5.03 kB │ gzip:   1.61 kB
+.vercel/output/functions/__server.func/_libs/radix-ui__react-tooltip.mjs             5.98 kB │ gzip:   1.76 kB
+.vercel/output/functions/__server.func/_libs/d3-array.mjs                            8.06 kB │ gzip:   2.25 kB
+.vercel/output/functions/__server.func/_libs/eventemitter3.mjs                       8.31 kB │ gzip:   2.05 kB
+.vercel/output/functions/__server.func/_libs/lucide-react.mjs                        8.97 kB │ gzip:   2.32 kB
+.vercel/output/functions/__server.func/_libs/h3-v2+rou3.mjs                          9.83 kB │ gzip:   3.05 kB
+.vercel/output/functions/__server.func/_libs/d3-color.mjs                           10.38 kB │ gzip:   3.57 kB
+.vercel/output/functions/__server.func/_libs/d3-format.mjs                          10.56 kB │ gzip:   3.02 kB
+.vercel/output/functions/__server.func/_libs/tanstack__history.mjs                  12.50 kB │ gzip:   3.70 kB
+.vercel/output/functions/__server.func/_ssr/router-DxOzEthd.mjs                     13.79 kB │ gzip:   4.69 kB
+.vercel/output/functions/__server.func/_libs/fast-equals.mjs                        15.91 kB │ gzip:   4.13 kB
+.vercel/output/functions/__server.func/_libs/h3+rou3+srvx.mjs                       22.57 kB │ gzip:   6.12 kB
+.vercel/output/functions/__server.func/_libs/@radix-ui/react-slider+[...].mjs       22.79 kB │ gzip:   5.48 kB
+.vercel/output/functions/__server.func/_libs/decimal.js-light.mjs                   23.31 kB │ gzip:   6.89 kB
+.vercel/output/functions/__server.func/_libs/d3-shape.mjs                           24.60 kB │ gzip:   5.02 kB
+.vercel/output/functions/__server.func/_libs/@tanstack/router-core+[...].mjs        29.60 kB │ gzip:   7.98 kB
+.vercel/output/functions/__server.func/index.mjs                                    32.22 kB │ gzip:  10.04 kB
+.vercel/output/functions/__server.func/_libs/react-smooth.mjs                       37.85 kB │ gzip:   8.15 kB
+.vercel/output/functions/__server.func/_libs/@radix-ui/react-collection+[...].mjs   44.06 kB │ gzip:  10.04 kB
+.vercel/output/functions/__server.func/_libs/sonner.mjs                             53.68 kB │ gzip:  12.12 kB
+.vercel/output/functions/__server.func/_libs/d3-scale+[...].mjs                     58.23 kB │ gzip:  12.12 kB
+.vercel/output/functions/__server.func/_ssr/ssr.mjs                                 67.78 kB │ gzip:  17.61 kB
+.vercel/output/functions/__server.func/_libs/@radix-ui/react-dialog+[...].mjs       80.46 kB │ gzip:  18.92 kB
+.vercel/output/functions/__server.func/_libs/tailwind-merge.mjs                     88.13 kB │ gzip:  15.66 kB
+.vercel/output/functions/__server.func/_libs/zod.mjs                               159.58 kB │ gzip:  34.87 kB
+.vercel/output/functions/__server.func/_libs/lodash.mjs                            164.62 kB │ gzip:  29.74 kB
+.vercel/output/functions/__server.func/_ssr/routes-C5rnlM5u.mjs                    281.15 kB │ gzip:  68.55 kB
+.vercel/output/functions/__server.func/_libs/xlsx.mjs                              560.75 kB │ gzip: 141.35 kB
+.vercel/output/functions/__server.func/_libs/recharts+[...].mjs                    569.95 kB │ gzip: 105.07 kB
+.vercel/output/functions/__server.func/_libs/@tanstack/react-router+[...].mjs      754.97 kB │ gzip: 158.92 kB
+
+✓ built in 2.10s
+ℹ Generated .vercel/output/nitro.json
+
+[nitro] ✔ You can preview this build using npx vite preview
+[nitro] ✔ You can deploy this build using npx nitro deploy --prebuilt
+
+> db:migrate
+> node scripts/migrate.mjs
+
+[migrate] DATABASE_URL not set — skipping (the PGLite fallback migrates itself).

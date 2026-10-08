@@ -1,0 +1,100 @@
+✔ survey suggestion recovers multiple reflective scales (39.584648ms)
+✔ panel suggestion splits into formative clusters (3.772769ms)
+✔ too few items yields leftover only (0.393853ms)
+✔ user-specified k is used for survey factors (71.504569ms)
+✔ user-specified k is used for panel clusters (2.35126ms)
+✔ pruneCollinear keeps at least two representatives (0.244378ms)
+✔ collinear construct flags only redundant copies (1.610284ms)
+✔ survey same-scale correlation is not high_corr (24.669596ms)
+✔ construct fit reports alpha on survey dims (3.759489ms)
+✔ meanByEntity averages panel scores (6.055795ms)
+✔ scripts mention selected keys (1.276671ms)
+✔ survey auto construct still recovers four scales (51.339583ms)
+✔ scale hints do not force log on likert (3.106677ms)
+✔ winsorize clips tails (1.449943ms)
+✔ log skips mostly non-positive columns (0.591561ms)
+✔ ln maps positive values (0.185839ms)
+✔ weighted mean matches hand calc (0.240392ms)
+✖ dta reader parses CFPS county match file (0.356757ms)
+✖ dta import becomes a dataset (0.16632ms)
+✖ xlsx import reads CGSS 2017 codebook (0.366902ms)
+✔ engine scores include weight 1 by default (7.307129ms)
+✔ group means weight by sampling weight (9.265768ms)
+✔ screen uses transform (46.628522ms)
+✔ samplingWeights zeros nonpositive (0.663829ms)
+✔ median and trimmed mean (2.604491ms)
+✔ MAD is robust to an outlier (0.270567ms)
+✔ Kendall tau is 1 on a monotone pair (0.294012ms)
+✔ assocMatrix spearman matches ranks (0.467234ms)
+✔ nonlinear gap flags a hockey-stick (0.267393ms)
+✔ Mokken H is high on a Guttman-like scale (0.342726ms)
+✔ Mann-Kendall detects an increasing series (0.532852ms)
+✔ Mann-Kendall is null on noise around a constant (0.166441ms)
+✔ Sen slope on a known line (0.347884ms)
+✔ Kendall W is 1 when ranks agree (0.43173ms)
+✔ Kruskal-Wallis separates shifted groups (0.526753ms)
+✔ Mann-Whitney two-sample (0.229886ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 33
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1060.281181
+
+✖ failing tests:
+
+test at src/lib/io.test.ts:38:1
+✖ dta reader parses CFPS county match file (0.356757ms)
+  Error: ENOENT: no such file or directory, open '/workspace/artifacts/survey/cfps/顺序码匹配.dta'
+      at Object.openSync (node:fs:622:18)
+      at readFileSync (node:fs:488:35)
+      at TestContext.<anonymous> (file:///workspace/grok-workspace/src/lib/io.test.ts:39:15)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/workspace/artifacts/survey/cfps/顺序码匹配.dta'
+  }
+
+test at src/lib/io.test.ts:48:1
+✖ dta import becomes a dataset (0.16632ms)
+  Error: ENOENT: no such file or directory, open '/workspace/artifacts/survey/cfps/顺序码匹配.dta'
+      at Object.openSync (node:fs:622:18)
+      at readFileSync (node:fs:488:35)
+      at TestContext.<anonymous> (file:///workspace/grok-workspace/src/lib/io.test.ts:49:15)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/workspace/artifacts/survey/cfps/顺序码匹配.dta'
+  }
+
+test at src/lib/io.test.ts:58:1
+✖ xlsx import reads CGSS 2017 codebook (0.366902ms)
+  Error: ENOENT: no such file or directory, open '/workspace/artifacts/survey/cgss/cgss2017代码表.xls'
+      at Object.openSync (node:fs:622:18)
+      at readFileSync (node:fs:488:35)
+      at TestContext.<anonymous> (file:///workspace/grok-workspace/src/lib/io.test.ts:59:15)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/workspace/artifacts/survey/cgss/cgss2017代码表.xls'
+  }
