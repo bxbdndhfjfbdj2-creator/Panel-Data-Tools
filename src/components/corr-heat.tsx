@@ -1,18 +1,21 @@
 import { useMemo } from "react";
 import { indicatorCorr } from "@/lib/engine";
 import type { Dataset } from "@/lib/types";
+import type { TransformSpec } from "@/lib/types";
 import { cn, fmt } from "@/lib/utils";
 
 export function CorrHeat({
   dataset,
   keys,
+  transform,
 }: {
   dataset: Dataset;
   keys?: string[];
+  transform?: TransformSpec;
 }) {
   const { keys: used, names, R } = useMemo(
-    () => indicatorCorr(dataset, keys ?? dataset.indicators.map((i) => i.key)),
-    [dataset, keys],
+    () => indicatorCorr(dataset, keys ?? dataset.indicators.map((i) => i.key), transform),
+    [dataset, keys, transform],
   );
 
   if (used.length < 2) return null;
@@ -21,7 +24,7 @@ export function CorrHeat({
     <section className="rounded-xl bg-surface p-4 shadow-border sm:p-5">
       <h3 className="text-sm font-medium">相关矩阵</h3>
       <p className="mt-1 text-xs text-muted">
-        Pearson 两两相关。饱和度越高、|r| 越大；暖色为负相关。
+        Pearson 两两相关{dataset.weightKey ? "（按抽样权重）" : "（未加权）"}，使用筛选步相同的缩尾 / 对数变换与正负向统一口径。饱和度越高、|r| 越大；暖色为负相关。
       </p>
       <div className="mt-3 overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-px text-2xs">

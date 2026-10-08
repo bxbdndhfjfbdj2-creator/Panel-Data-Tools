@@ -106,8 +106,8 @@ function fromSnap(snap: WorkspaceSnap | null) {
     dataset: snap.dataset,
     thresholds: snap.thresholds,
     method: snap.method,
-    standardize: snap.standardize,
-    missingMode: snap.missingMode ?? ("listwise" as MissingMode),
+    standardize: snap.method === "topsis" ? "minmax" as Standardize : snap.standardize,
+    missingMode: snap.method === "topsis" && snap.missingMode === "pairwise" ? "listwise" as MissingMode : snap.missingMode ?? ("listwise" as MissingMode),
     transform: {
       winsor: snap.transform?.winsor ?? 0,
       logMode: snap.transform?.logMode ?? "off",
@@ -404,9 +404,15 @@ export const useStudio = create<StudioState>()((set, get) => ({
     });
   },
 
-  setMethod: (method) => set({ method }),
-  setStandardize: (standardize) => set({ standardize }),
-  setMissingMode: (missingMode) => set({ missingMode }),
+  setMethod: (method) => set({ method, ...(method === "topsis" ? { standardize: "minmax" as Standardize, ...(get().missingMode === "pairwise" ? { missingMode: "listwise" as MissingMode } : {}) } : {}) }),
+  setStandardize: (standardize) => {
+    if (get().method === "topsis" && standardize === "zscore") return;
+    set({ standardize });
+  },
+  setMissingMode: (missingMode) => {
+    if (missingMode === "pairwise" && get().method === "topsis") return;
+    set({ missingMode });
+  },
   setTransform: (patch) => set({ transform: { ...get().transform, ...patch } }),
   setYearRange: (yearFrom, yearTo) => {
     if (yearFrom != null && yearTo != null && yearFrom > yearTo) {
@@ -426,8 +432,8 @@ export const useStudio = create<StudioState>()((set, get) => ({
       dataset: snap.dataset,
       thresholds: snap.thresholds,
       method: snap.method,
-      standardize: snap.standardize,
-      missingMode: snap.missingMode ?? "listwise",
+      standardize: snap.method === "topsis" ? "minmax" : snap.standardize,
+      missingMode: snap.method === "topsis" && snap.missingMode === "pairwise" ? "listwise" : snap.missingMode ?? "listwise",
       transform: {
         winsor: snap.transform?.winsor ?? 0,
         logMode: snap.transform?.logMode ?? "off",

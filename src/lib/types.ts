@@ -126,6 +126,7 @@ export interface WeightTable {
   dimension: Record<string, number>;
   pcaVariance?: number;
   notes: string[];
+  error?: string;
 }
 
 export interface ScoreRow {
@@ -139,6 +140,10 @@ export interface ScoreRow {
   z: Record<string, number>;
   /** Design weight copied from the source row; 1 if none. */
   weight: number;
+  /** Optional row-level provenance for downstream summaries. */
+  metadata?: Record<string, string | number | boolean | null>;
+  contributions?: Record<string, number>;
+  contributionIntercept?: number;
 }
 
 export interface MethodRanks {

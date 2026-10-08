@@ -17,7 +17,7 @@ import {
   YAxis,
 } from "recharts";
 
-const METHODS: AggMethod[] = ["equal", "entropy", "cv", "critic", "pca", "topsis", "custom"];
+const METHODS: AggMethod[] = ["equal", "entropy", "cv", "critic", "pca", "topsis", "custom", "median", "trimmed"];
 
 export function AggregatePanel() {
   const ds = useSlicedDataset();
@@ -38,7 +38,7 @@ export function AggregatePanel() {
     () => computeWeights({ ...full, rows: ds.rows }, method, missingMode, transform),
     [full, ds.rows, method, missingMode, transform],
   );
-  const rel = useMemo(() => reliability({ ...full, rows: ds.rows }), [full, ds.rows]);
+  const rel = useMemo(() => reliability({ ...full, rows: ds.rows }, transform), [full, ds.rows, transform]);
 
   const chartData = full.indicators
     .filter((i) => i.selected && i.dimensionId)
@@ -143,6 +143,8 @@ export function AggregatePanel() {
             <button
               type="button"
               onClick={() => setStandardize("zscore")}
+              disabled={method === "topsis"}
+              title={method === "topsis" ? "TOPSIS 固定使用极差标准化" : undefined}
               className={cn(
                 "min-h-11 rounded-md px-3 py-2 text-xs font-medium shadow-border",
                 standardize === "zscore" ? "bg-accent text-accent-fg" : "bg-bg",
@@ -152,7 +154,9 @@ export function AggregatePanel() {
             </button>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            {standardize === "minmax"
+            {method === "topsis"
+              ? "TOPSIS 固定将正负向指标映射至 [0,1]，贴近度以 0–1 返回，结果页综合指数显示为 0–100。"
+              : standardize === "minmax"
               ? "映射到 [0,1]，负向指标取 1−x。合成后乘 100。"
               : "按样本均值与标准差中心化，负向取反。合成为均分 50、标准差 10 的指数。"}
           </p>
@@ -181,6 +185,8 @@ export function AggregatePanel() {
             <button
               type="button"
               onClick={() => setMissingMode("pairwise")}
+              disabled={method === "topsis"}
+              title={method === "topsis" ? "TOPSIS 不支持可用指标模式" : undefined}
               className={cn(
                 "min-h-11 rounded-md px-3 py-2 text-xs font-medium shadow-border",
                 missingMode === "pairwise" ? "bg-accent text-accent-fg" : "bg-bg",
@@ -189,6 +195,7 @@ export function AggregatePanel() {
               可用指标
             </button>
           </div>
+          {method === "topsis" && <p className="mt-2 text-xs text-muted">TOPSIS 要求完整指标向量；有缺失时请选整行删除或均值填补。</p>}
           <p className="mt-3 text-xs leading-relaxed text-muted">
             {missingMode === "listwise"
               ? "任一纳入指标缺失则整行剔除。"
@@ -283,6 +290,8 @@ export function AggregatePanel() {
           })}
         </section>
       )}
+
+      {(method === "median" || method === "trimmed") && <p className="rounded-lg bg-bg-subtle px-4 py-3 text-xs leading-relaxed text-muted">{method === "median" ? "维度内取标准化指标的中位数，再按维度权重合成。" : "维度内剔除两端各 10% 后取均值，再按维度权重合成。"} 这两种方法非加性，结果页不展示指标贡献分解。</p>}
 
       <section className="overflow-hidden rounded-xl bg-surface shadow-border">
         <table className="min-w-full text-left text-xs">

@@ -78,7 +78,7 @@ export function ResultsPanel() {
     () => computeScores(ds, weights, standardize, method, missingMode, transform),
     [ds, weights, standardize, method, missingMode, transform],
   );
-  const rel = useMemo(() => reliability(ds), [ds]);
+  const rel = useMemo(() => reliability(ds, transform), [ds, transform]);
   const screen = useMemo(() => screenDataset(ds, thresholds, transform), [ds, thresholds, transform]);
   const years = useMemo(() => numericYears(ds), [ds]);
 
@@ -123,8 +123,8 @@ export function ResultsPanel() {
 
   const contrib = useMemo(() => {
     const row = ranking.find((r) => r.entity === entity);
-    if (!row || method === "topsis") return [];
-    return indicatorContributions(ds, weights, row).slice(0, 8);
+    if (!row || method === "topsis" || method === "median" || method === "trimmed") return [];
+    return indicatorContributions(ds, weights, row);
   }, [ranking, entity, ds, weights, method]);
 
   const series = useMemo(() => {
@@ -234,7 +234,7 @@ export function ResultsPanel() {
           <p className="text-xs font-medium tracking-widest text-muted uppercase">输出</p>
           <h2 className="font-display mt-1 text-2xl font-medium sm:text-3xl">{ds.goalName}</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            {METHOD_META[method].label} · {standardize === "minmax" ? "极差标准化" : "Z 分数"}
+            {METHOD_META[method].label} · {method === "topsis" ? "TOPSIS 方向调整极差标准化" : standardize === "minmax" ? "极差标准化" : "Z 分数"}
             {missingMode === "mean" ? " · 均值填补" : missingMode === "pairwise" ? " · 可用指标" : ""}
             {panelRankHint(ds.kind, resultMode, resultYear)}
             {bundle.dropped ? ` · 因缺失删除 ${bundle.dropped} 条` : ""}
@@ -276,6 +276,8 @@ export function ResultsPanel() {
           </Button>
         </div>
       </header>
+
+      {(bundle.error || weights.error) && <div role="alert" className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{bundle.error ?? weights.error}</div>}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="样本 / 个体" value={String(ranking.length)} />
@@ -343,6 +345,7 @@ export function ResultsPanel() {
               ))}
             </SelectNative>
           </div>
+          <p className="mb-2 text-xs text-muted">{method === "topsis" ? "维度分数按方向调整后的极差标准化显示为 0–100；综合指数是 TOPSIS 贴近度换算到 0–100，二者不可加总。" : standardize === "zscore" ? "每个维度与综合指数分别映射为均分 50、标准差 10；维度值不能直接相加还原综合指数。" : "维度与综合指数均以 0–100 显示，维度按维度权重合成综合指数。"}</p>
           <div className="h-64">
             <ClientOnly fallback={<div className="h-full rounded-md bg-bg-subtle" />}>
               <ResponsiveContainer width="100%" height="100%">
@@ -363,8 +366,9 @@ export function ResultsPanel() {
         <section className="rounded-xl bg-surface p-4 shadow-border sm:p-5">
           <h3 className="text-sm font-medium">{entity} · 指标贡献</h3>
           <p className="mt-1 text-xs text-muted">
-            标准化取值 × 全局权重。正值推高综合指数。
+            所列贡献与截距相加等于当前综合指数。正值推高综合指数。
           </p>
+          <p className="mt-1 text-xs text-muted">截距 {fmt(ranking.find((r) => r.entity === entity)?.contributionIntercept ?? 0, 2)}</p>
           <div className="mt-3 h-56">
             <ClientOnly fallback={<div className="h-full rounded-md bg-bg-subtle" />}>
               <ResponsiveContainer width="100%" height="100%">
@@ -457,8 +461,9 @@ export function ResultsPanel() {
       <section className="rounded-xl bg-surface p-4 shadow-border sm:p-5">
         <h3 className="text-sm font-medium">方法对照 · 名次</h3>
         <p className="mt-1 text-xs text-muted">
-          同一批个体在六种客观赋权下的名次。名次越接近，结论越不依赖单一方法。
+          同一批个体在可用客观赋权方法下的名次。名次越接近，结论越不依赖单一方法。
         </p>
+        {Object.entries(cross.skipped).map(([m, reason]) => <p key={m} className="mt-1 text-xs text-muted">{METHOD_META[m as AggMethod].short} 已跳过：{reason}</p>)}
         <div className="mt-3 overflow-x-auto">
           <table className="min-w-full text-left text-xs">
             <thead>

@@ -40,6 +40,7 @@ export function ScreenPanel() {
             {ds.kind === "panel" ? " 面板额外给出 ICC(1)。" : " 问卷检题总相关、地板 / 天花板与删题后 α。"}
             {ds.weightKey ? " 已启用抽样权重，均值、标准差与相关为加权估计。" : ""}
             {transform.winsor || transform.logMode !== "off" ? " 诊断基于聚合步所选的缩尾 / 对数变换后的取值。" : ""}
+            {" 筛选候选集为当前数据集的全部指标；非阻断的维间相关与非线性提示仍显示为警告。"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -182,17 +183,14 @@ export function ScreenPanel() {
                       <div className="text-2xs text-subtle">{r.key}</div>
                     </td>
                     <td className="px-3 py-2">
-                      {r.pass ? (
-                        <Badge variant="ok">通过</Badge>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {r.flags.map((f) => (
-                            <Badge key={f} variant={f === "high_corr" || f === "high_vif" ? "warn" : "danger"}>
-                              {FLAG_LABEL[f]}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {r.pass && <Badge variant="ok">通过</Badge>}
+                        {r.flags.map((f) => (
+                          <Badge key={f} variant={f === "between_corr" || f === "nonlinear" || f === "high_corr" || f === "high_vif" ? "warn" : "danger"}>
+                            {FLAG_LABEL[f]}
+                          </Badge>
+                        ))}
+                      </div>
                     </td>
                     <td className={cn("px-3 py-2 tabular", r.missing > th.maxMissing && "text-danger")}>
                       {fmtPct(r.missing)}
@@ -237,7 +235,7 @@ export function ScreenPanel() {
           {heatSelectedOnly ? "相关矩阵：仅已纳入" : "相关矩阵：全部指标"}
         </button>
       </div>
-      <CorrHeat dataset={ds} keys={heatKeys} />
+      <CorrHeat dataset={ds} keys={heatKeys} transform={transform} />
     </div>
   );
 }

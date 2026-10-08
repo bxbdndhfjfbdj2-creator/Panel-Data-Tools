@@ -44,6 +44,7 @@ import {
   weightedMean,
   weightedSd,
 } from "./transform";
+import { median, trimmedMean } from "./npar";
 import {
   assocMatrix,
   mad as madStat,
@@ -54,7 +55,9 @@ import {
 function preparedCols(ds: Dataset, keys: string[], tx: TransformSpec) {
   const skipped: string[] = [];
   const cols = keys.map((k) => {
-    const r = applyTransform(colValues(ds.rows, k), tx);
+    const override = ds.indicators.find((i) => i.key === k)?.logMode;
+    const spec = override == null ? tx : { ...tx, logMode: override };
+    const r = applyTransform(colValues(ds.rows, k), spec);
     if (r.skippedLog) skipped.push(k);
     return r.col;
   });
@@ -86,14 +89,12 @@ export function screenDataset(
   const keys = ds.indicators.map((i) => i.key);
   const { cols } = preparedCols(ds, keys, tx);
   const names = Object.fromEntries(ds.indicators.map((i) => [i.key, i.name]));
+  const orientedCols = cols.map((col, j) => recodeForDirection(col, ds.indicators[j]!.direction));
   const sw = samplingWeights(ds.rows, ds.weightKey);
   const hasW = Boolean(ds.weightKey);
-  const wide = keys.length > 48;
   const method = corrMethod === "kendall" && ds.rows.length > 800 ? "spearman" : corrMethod;
-  const R = wide
-    ? keys.map((_, i) => keys.map((__, j) => (i === j ? 1 : 0)))
-    : assocMatrix(cols, method, hasW && method === "pearson" ? sw : undefined);
-  const vifs: (number | null)[] = wide ? keys.map(() => null) : vifFromCorr(R);
+  const R = assocMatrix(orientedCols, method, hasW && method === "pearson" ? sw : undefined);
+  const vifs: (number | null)[] = vifFromCorr(R);
 
   const dimOf = new Map(ds.indicators.map((i) => [i.key, i.dimensionId] as const));
   const measureOf = (dimId: string | null): MeasureKind | null => {
@@ -103,7 +104,7 @@ export function screenDataset(
       (ds.kind === "survey" ? "reflective" : "formative")
     );
   };
-  if (!wide) {
+  {
     for (const dim of ds.dimensions) {
       const idxs = keys.map((_, i) => i).filter((i) => dimOf.get(keys[i]!) === dim.id);
       if (idxs.length < 3) continue;
@@ -116,19 +117,21 @@ export function screenDataset(
   }
 
   const scored = cols.map((col, j) => recodeForDirection(col, ds.indicators[j]!.direction));
-  const alignedAll = completeCases(scored);
   const itemTotals: (number | null)[] = keys.map(() => null);
   const alphaDeleted: (number | null)[] = keys.map(() => null);
   const alphaRef: (number | null)[] = keys.map(() => null);
   let overallAlpha: number | null = null;
 
   if (ds.kind === "survey") {
-    if (alignedAll && alignedAll.cols.length >= 2) {
-      const a = cronbachAlpha(alignedAll.cols);
+    const reflectiveIdxs = ds.indicators.flatMap((ind, j) => measureOf(ind.dimensionId) === "reflective" ? [j] : []);
+    const reflectiveAligned = completeCases(reflectiveIdxs.map((j) => scored[j]!));
+    if (reflectiveAligned && reflectiveAligned.cols.length >= 2) {
+      const a = cronbachAlpha(reflectiveAligned.cols);
       if (Number.isFinite(a)) overallAlpha = a;
     }
     const groups = new Map<string, number[]>();
     ds.indicators.forEach((ind, j) => {
+      if (measureOf(ind.dimensionId) !== "reflective") return;
       const nInDim = ind.dimensionId
         ? ds.indicators.filter((x) => x.dimensionId === ind.dimensionId).length
         : 0;
@@ -197,7 +200,7 @@ export function screenDataset(
     const aDel = alphaDeleted[j];
     const aBase = alphaRef[j] ?? overallAlpha;
     const gapRS =
-      maxCorr && !wide ? pearsonSpearmanGap(raw, cols[keys.indexOf(maxCorr.key)]!) : NaN;
+      maxCorr ? pearsonSpearmanGap(cols[j]!, cols[keys.indexOf(maxCorr.key)]!) : NaN;
 
     const flags: ScreenRow["flags"] = [];
     if (!xs.length || s === 0 || !Number.isFinite(s)) flags.push("constant");
@@ -206,7 +209,7 @@ export function screenDataset(
     if (Number.isFinite(gapRS) && gapRS > 0.2) flags.push("nonlinear");
     const meas = measureOf(ind.dimensionId);
     if (meas !== "reflective" && vif != null && vif > th.maxVif) flags.push("high_vif");
-    if (ds.kind === "survey" && itemTotal != null && itemTotal < th.minItemTotal) {
+    if (ds.kind === "survey" && meas === "reflective" && itemTotal != null && itemTotal < th.minItemTotal) {
       flags.push("low_item_total");
     }
     if (ds.kind === "survey" && floor != null && floor > th.maxFloorCeiling) flags.push("floor");
@@ -215,6 +218,7 @@ export function screenDataset(
     }
     if (
       ds.kind === "survey" &&
+      meas === "reflective" &&
       aDel != null &&
       aBase != null &&
       Number.isFinite(aDel) &&
@@ -291,13 +295,15 @@ export function screenDataset(
   return rows;
 }
 
-export function indicatorCorr(ds: Dataset, keys?: string[]) {
+export function indicatorCorr(ds: Dataset, keys?: string[], tx: TransformSpec = DEFAULT_TRANSFORM) {
   const use = keys ?? ds.indicators.map((i) => i.key);
-  const cols = use.map((k) => colValues(ds.rows, k));
+  const { cols: prepared } = preparedCols(ds, use, tx);
+  const cols = prepared.map((col, j) => recodeForDirection(col, ds.indicators.find((i) => i.key === use[j])?.direction ?? 1));
+  const sw = ds.weightKey ? samplingWeights(ds.rows, ds.weightKey) : undefined;
   return {
     keys: use,
     names: use.map((k) => ds.indicators.find((i) => i.key === k)?.name ?? k),
-    R: corrMatrix(cols),
+    R: corrMatrix(cols, sw),
   };
 }
 
@@ -356,22 +362,24 @@ function scaleNullable(
   });
 }
 
-export function reliability(ds: Dataset): { overall: number | null; byDim: Record<string, number> } {
+export function reliability(ds: Dataset, tx: TransformSpec = DEFAULT_TRANSFORM): { overall: number | null; byDim: Record<string, number> } {
   const byDim: Record<string, number> = {};
   if (ds.kind !== "survey") return { overall: null, byDim };
   for (const dim of ds.dimensions) {
+    if ((dim.measure ?? (ds.kind === "survey" ? "reflective" : "formative")) !== "reflective") continue;
     const members = ds.indicators.filter((i) => i.selected && i.dimensionId === dim.id);
     if (members.length < 2) continue;
-    const cols = members.map((m) => recodeForDirection(colValues(ds.rows, m.key), m.direction));
+    const cols = preparedCols(ds, members.map((m) => m.key), tx).cols.map((col, j) => recodeForDirection(col, members[j]!.direction));
     const aligned = completeCases(cols);
     if (!aligned || aligned.keep.length < 8) continue;
     const a = cronbachAlpha(aligned.cols);
     if (Number.isFinite(a)) byDim[dim.id] = a;
   }
-  const all = ds.indicators.filter((i) => i.selected);
+  const all = ds.indicators.filter((i) => i.selected && i.dimensionId != null &&
+    (ds.dimensions.find((d) => d.id === i.dimensionId)?.measure ?? (ds.kind === "survey" ? "reflective" : "formative")) === "reflective");
   let overall: number | null = null;
   if (all.length >= 2) {
-    const cols = all.map((m) => recodeForDirection(colValues(ds.rows, m.key), m.direction));
+    const cols = preparedCols(ds, all.map((m) => m.key), tx).cols.map((col, j) => recodeForDirection(col, all[j]!.direction));
     const aligned = completeCases(cols);
     if (aligned && aligned.keep.length >= 8) {
       const a = cronbachAlpha(aligned.cols);
@@ -379,6 +387,10 @@ export function reliability(ds: Dataset): { overall: number | null; byDim: Recor
     }
   }
   return { overall, byDim };
+}
+
+function hasMissing(cols: (number | null)[][]): boolean {
+  return cols.some((col) => col.some((value) => value == null || !Number.isFinite(value)));
 }
 
 export function computeWeights(
@@ -390,8 +402,33 @@ export function computeWeights(
   const notes: string[] = [];
   const dimW: Record<string, number> = {};
   for (const d of ds.dimensions) {
+    if (!Number.isFinite(d.weight) || d.weight < 0) {
+      return {
+        method,
+        indicator: {},
+        dimension: {},
+        notes,
+        error: `维度「${d.name}」的权重必须是有限的非负数。`,
+      };
+    }
     const has = ds.indicators.some((i) => i.selected && i.dimensionId === d.id);
     dimW[d.id] = has ? d.weight : 0;
+  }
+  for (const indicator of ds.indicators) {
+    if (!Number.isFinite(indicator.weight) || indicator.weight < 0) {
+      return {
+        method,
+        indicator: {},
+        dimension: {},
+        notes,
+        error: `指标「${indicator.name}」的权重必须是有限的非负数。`,
+      };
+    }
+  }
+  const activeDims = Object.keys(dimW).filter((id) => ds.indicators.some((i) => i.selected && i.dimensionId === id));
+  if (activeDims.length && activeDims.every((id) => !(dimW[id]! > 0))) {
+    for (const id of activeDims) dimW[id] = 1 / activeDims.length;
+    notes.push("纳入维度的原始权重全为 0，已在非空维度间等权回退；空维度权重保持为 0。");
   }
   if (Object.values(dimW).some((w) => w === 0)) {
     notes.push("无纳入指标的维度已从合成中剔除，其余维度权重已重新归一。");
@@ -402,7 +439,15 @@ export function computeWeights(
 
   const indicator: Record<string, number> = {};
   let pcaVariance: number | undefined;
+  let pcaCount = 0;
   const skippedLog: string[] = [];
+  if (method === "topsis" && missing === "pairwise") {
+    const prepared = preparedCols(ds, ds.indicators.filter((i) => i.selected && i.dimensionId).map((i) => i.key), tx);
+    if (hasMissing(prepared.cols)) {
+      const error = "TOPSIS 不支持存在缺失值时的“可用指标”处理；请选择整行删除或均值填补。";
+      return { method, indicator, dimension: dimNorm, notes: [...notes, error], error };
+    }
+  }
 
   for (const dim of ds.dimensions) {
     const members = ds.indicators.filter((i) => i.selected && i.dimensionId === dim.id);
@@ -421,11 +466,12 @@ export function computeWeights(
       continue;
     }
     if (method === "cv") {
-      const cvs = members.map((m) => {
-        const r = applyTransform(colValues(ds.rows, m.key), tx);
-        if (r.skippedLog) skippedLog.push(m.key);
-        const mu = ds.weightKey ? weightedMean(r.col, sw) : mean(finite(r.col));
-        const s = ds.weightKey ? weightedSd(r.col, sw) : sd(finite(r.col));
+      const prepared = preparedCols(ds, members.map((m) => m.key), tx);
+      skippedLog.push(...prepared.skipped);
+      const cvs = members.map((m, i) => {
+        const values = prepared.cols[i]!;
+        const mu = ds.weightKey ? weightedMean(values, sw) : mean(finite(values));
+        const s = ds.weightKey ? weightedSd(values, sw) : sd(finite(values));
         return mu !== 0 && Number.isFinite(mu) && Number.isFinite(s) ? Math.abs(s / mu) : 0;
       });
       const nw = normalizeWeights(cvs);
@@ -462,8 +508,8 @@ export function computeWeights(
       const zCols = aligned.cols.map((col, j) => zscoreNorm(col, dirs[j]!));
       const pca = pcaWeights(zCols);
       w = pca.weights;
-      if (pcaVariance == null) pcaVariance = pca.variance;
-      else pcaVariance = (pcaVariance + pca.variance) / 2;
+      pcaVariance = (pcaVariance ?? 0) + pca.variance;
+      pcaCount += 1;
     }
     members.forEach((m, i) => {
       indicator[m.key] = w[i] ?? 1 / members.length;
@@ -471,7 +517,8 @@ export function computeWeights(
   }
 
   if (method === "pca" && pcaVariance != null) {
-    notes.push(`各维度第一主成分平均解释方差 ${Math.round(pcaVariance * 1000) / 10}%。`);
+    pcaVariance /= Math.max(1, pcaCount);
+    notes.push(`成功估计维度的第一主成分解释方差均值 ${Math.round(pcaVariance * 1000) / 10}%。`);
   }
   if (missing === "mean") {
     notes.push("缺失值按列均值填补后再进入赋权与合成。");
@@ -491,7 +538,7 @@ function normalizeRecord(w: Record<string, number>): Record<string, number> {
   const keys = Object.keys(w);
   const s = keys.reduce((a, k) => a + (w[k] ?? 0), 0);
   const out: Record<string, number> = {};
-  for (const k of keys) out[k] = s ? (w[k] ?? 0) / s : 1 / keys.length;
+  for (const k of keys) out[k] = s ? (w[k] ?? 0) / s : 0;
   return out;
 }
 
@@ -500,6 +547,13 @@ export interface ScoreBundle {
   dropped: number;
   kmo: number | null;
   method: AggMethod;
+  error?: string;
+}
+
+function aggregateValues(values: number[], method: AggMethod): number {
+  if (method === "median") return median(values);
+  if (method === "trimmed") return trimmedMean(values, 0.1);
+  return mean(values);
 }
 
 function scoreAvailable(
@@ -550,19 +604,21 @@ function scoreAvailable(
       let num = 0;
       let den = 0;
       let nObs = 0;
+      const observed: number[] = [];
       for (const key of mem) {
         if (z[key] == null) continue;
         const w = weights.indicator[key] ?? 0;
         num += z[key]! * w;
         den += w;
         nObs += 1;
+        observed.push(z[key]!);
       }
       const need = mem.length >= 2 ? Math.max(2, Math.ceil(mem.length / 2)) : 1;
       if (!den || nObs < need) {
         missingDim = true;
         break;
       }
-      const ds_ = num / den;
+      const ds_ = method === "median" || method === "trimmed" ? aggregateValues(observed, method) : num / den;
       dims[dim.id] = ds_;
       const dw = weights.dimension[dim.id] ?? 0;
       comp += ds_ * dw;
@@ -577,9 +633,12 @@ function scoreAvailable(
     }
   }
 
+  const rawComposite = composite.slice();
+  const rawMean = mean(rawComposite);
+  const rawSd = sd(rawComposite);
   if (standardize === "zscore") {
-    const mn = mean(composite);
-    const s = sd(composite);
+    const mn = rawMean;
+    const s = rawSd;
     for (let i = 0; i < composite.length; i++) {
       composite[i] = s ? 50 + (10 * (composite[i]! - mn)) / s : 50;
     }
@@ -609,6 +668,29 @@ function scoreAvailable(
     }
     const timeRaw = ds.timeKey ? raw[ds.timeKey] : null;
     const w = sw[rowIndex] ?? 1;
+    const contributions: Record<string, number> = {};
+    let contributionIntercept = 0;
+    if (method !== "median" && method !== "trimmed" && method !== "topsis") {
+      let availableDimWeight = 0;
+      for (const dim of ds.dimensions) {
+        const mem = dimMembers[dim.id] ?? [];
+        const den = mem.reduce((sum, key) => sum + (zList[i]![key] == null ? 0 : (weights.indicator[key] ?? 0)), 0);
+        if (den > 0) availableDimWeight += weights.dimension[dim.id] ?? 0;
+      }
+      const factor = standardize === "zscore" ? (rawSd ? 10 / rawSd : 0) : 100;
+      contributionIntercept = standardize === "zscore" ? 50 - rawMean * factor : 0;
+      for (const dim of ds.dimensions) {
+        const mem = dimMembers[dim.id] ?? [];
+        const den = mem.reduce((sum, key) => sum + (zList[i]![key] == null ? 0 : (weights.indicator[key] ?? 0)), 0);
+        if (!den || !availableDimWeight) continue;
+        for (const key of mem) {
+          const value = zList[i]![key];
+          if (value == null) continue;
+          const share = ((weights.indicator[key] ?? 0) / den) * ((weights.dimension[dim.id] ?? 0) / availableDimWeight);
+          contributions[key] = value * share * factor;
+        }
+      }
+    }
     return {
       rowIndex,
       entity: String(raw[ds.entityKey] ?? ""),
@@ -619,6 +701,13 @@ function scoreAvailable(
       dims,
       z,
       weight: w > 0 ? w : 0,
+      contributions: Object.keys(contributions).length ? contributions : undefined,
+      contributionIntercept,
+      metadata: Object.fromEntries(
+        [ds.entityKey, ds.timeKey, ds.groupKey, ds.weightKey]
+          .filter((key): key is string => Boolean(key))
+          .map((key) => [key, raw[key] ?? null]),
+      ),
     };
   });
 
@@ -638,12 +727,19 @@ export function computeScores(
   missing: MissingMode = "listwise",
   tx: TransformSpec = DEFAULT_TRANSFORM,
 ): ScoreBundle {
+  if (weights.error) return { rows: [], dropped: ds.rows.length, kmo: null, method, error: weights.error };
   const selected = ds.indicators.filter((i) => i.selected && i.dimensionId);
+  if (!selected.length) return { rows: [], dropped: ds.rows.length, kmo: null, method, error: "请至少纳入一个有维度归属的指标。" };
   const keys = selected.map((i) => i.key);
+  const scoringStandardize: Standardize = method === "topsis" ? "minmax" : standardize;
   const { cols } = preparedCols(ds, keys, tx);
   const dirs = selected.map((i) => i.direction);
   const kmoVal = keys.length >= 3 ? kmo(corrMatrix(cols)) : null;
 
+  if (missing === "pairwise" && method === "topsis" && !hasMissing(cols)) missing = "listwise";
+  if (missing === "pairwise" && method === "topsis") {
+    return { rows: [], dropped: ds.rows.length, kmo: null, method, error: "TOPSIS 不支持存在缺失值时的“可用指标”处理；请选择整行删除或均值填补。" };
+  }
   if (missing === "pairwise") {
     return scoreAvailable(ds, selected, keys, cols, dirs, weights, standardize, method, kmoVal);
   }
@@ -652,7 +748,7 @@ export function computeScores(
   if (!aligned) return { rows: [], dropped: ds.rows.length, kmo: null, method };
 
   const norm = aligned.cols.map((col, j) =>
-    standardize === "zscore" ? zscoreNorm(col, dirs[j]!) : minmaxNorm(col, dirs[j]!),
+    scoringStandardize === "zscore" ? zscoreNorm(col, dirs[j]!) : minmaxNorm(col, dirs[j]!),
   );
 
   const dimMembers: Record<string, string[]> = {};
@@ -669,11 +765,13 @@ export function computeScores(
     const arr = Array<number>(n).fill(0);
     for (let i = 0; i < n; i++) {
       let s = 0;
+      const observed: number[] = [];
       for (const key of mem) {
         const j = keys.indexOf(key);
         s += (norm[j]![i] ?? 0) * (weights.indicator[key] ?? 0);
+        observed.push(norm[j]![i] ?? 0);
       }
-      arr[i] = s;
+      arr[i] = method === "median" || method === "trimmed" ? aggregateValues(observed, method) : s;
     }
     dimScores[dim.id] = arr;
   }
@@ -703,10 +801,14 @@ export function computeScores(
     closeness = topsisCloseness(weighted);
     composite = closeness;
   }
+  const closeness01 = closeness?.slice();
 
-  if (standardize === "zscore" && method !== "topsis") {
-    const mn = mean(composite);
-    const s = sd(composite);
+  const rawComposite = composite.slice();
+  const rawMean = mean(rawComposite);
+  const rawSd = sd(rawComposite);
+  if (scoringStandardize === "zscore" && method !== "topsis") {
+    const mn = rawMean;
+    const s = rawSd;
     if (s) composite = composite.map((x) => 50 + (10 * (x - mn)) / s);
     else composite = composite.map(() => 50);
     for (const dim of Object.keys(dimScores)) {
@@ -727,7 +829,7 @@ export function computeScores(
     const raw = ds.rows[rowIndex]!;
     const z: Record<string, number> = {};
     keys.forEach((k, j) => {
-      z[k] = (norm[j]![i] ?? 0) * (standardize === "minmax" ? 100 : 1);
+      z[k] = (norm[j]![i] ?? 0) * (scoringStandardize === "minmax" ? 100 : 1);
     });
     const dims: Record<string, number> = {};
     for (const dim of ds.dimensions) {
@@ -735,16 +837,34 @@ export function computeScores(
     }
     const timeRaw = ds.timeKey ? raw[ds.timeKey] : null;
     const w = swAll[rowIndex] ?? 1;
+    const contributions: Record<string, number> = {};
+    let contributionIntercept = 0;
+    if (method !== "median" && method !== "trimmed" && method !== "topsis") {
+      const factor = scoringStandardize === "zscore" ? (rawSd ? 10 / rawSd : 0) : 1;
+      contributionIntercept = scoringStandardize === "zscore" ? 50 - rawMean * factor : 0;
+      for (const ind of selected) {
+        const value = z[ind.key] ?? 0;
+        const gw = (weights.indicator[ind.key] ?? 0) * (weights.dimension[ind.dimensionId!] ?? 0);
+        contributions[ind.key] = value * gw * factor;
+      }
+    }
     return {
       rowIndex,
       entity: String(raw[ds.entityKey] ?? ""),
       time: typeof timeRaw === "number" ? timeRaw : timeRaw != null ? Number(timeRaw) : null,
       group: ds.groupKey && raw[ds.groupKey] != null ? String(raw[ds.groupKey]) : null,
       composite: composite[i]!,
-      closeness: closeness ? closeness[i] : undefined,
+      closeness: closeness01 ? closeness01[i] : undefined,
       dims,
       z,
       weight: w > 0 ? w : 0,
+      contributions: Object.keys(contributions).length ? contributions : undefined,
+      contributionIntercept,
+      metadata: Object.fromEntries(
+        [ds.entityKey, ds.timeKey, ds.groupKey, ds.weightKey]
+          .filter((key): key is string => Boolean(key))
+          .map((key) => [key, raw[key] ?? null]),
+      ),
     };
   });
 
@@ -768,18 +888,31 @@ export function latestByEntity(rows: ScoreRow[]): ScoreRow[] {
 export function meanByEntity(rows: ScoreRow[]): ScoreRow[] {
   const acc = new Map<
     string,
-    { n: number; composite: number; dims: Record<string, number>; group: string | null; weight: number }
+    { n: number; composite: number; dims: Record<string, number>; group: string | null; weight: number; contributions: Record<string, number>; intercept: number; metadata: Record<string, string | number | boolean | null>; metadataNums: Record<string, { sum: number; n: number }> }
   >();
   for (const r of rows) {
     let a = acc.get(r.entity);
     if (!a) {
-      a = { n: 0, composite: 0, dims: {}, group: r.group, weight: 0 };
+      a = { n: 0, composite: 0, dims: {}, group: r.group, weight: 0, contributions: {}, intercept: 0, metadata: {}, metadataNums: {} };
       acc.set(r.entity, a);
     }
     a.n += 1;
     a.composite += r.composite;
     a.weight += r.weight;
     for (const [k, v] of Object.entries(r.dims)) a.dims[k] = (a.dims[k] ?? 0) + v;
+    for (const [k, v] of Object.entries(r.contributions ?? {})) a.contributions[k] = (a.contributions[k] ?? 0) + v;
+    a.intercept += r.contributionIntercept ?? 0;
+    for (const [key, value] of Object.entries(r.metadata ?? {})) {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        const entry = a.metadataNums[key] ??= { sum: 0, n: 0 };
+        entry.sum += value;
+        entry.n += 1;
+      } else if (!(key in a.metadata)) {
+        a.metadata[key] = value;
+      } else if (a.metadata[key] !== value) {
+        a.metadata[key] = null;
+      }
+    }
   }
   return [...acc.entries()]
     .map(([entity, a]) => ({
@@ -791,6 +924,12 @@ export function meanByEntity(rows: ScoreRow[]): ScoreRow[] {
       dims: Object.fromEntries(Object.entries(a.dims).map(([k, v]) => [k, a.n ? v / a.n : 0])),
       z: {},
       weight: a.n ? a.weight / a.n : 0,
+      contributions: Object.fromEntries(Object.entries(a.contributions).map(([k, v]) => [k, v / a.n])),
+      contributionIntercept: a.n ? a.intercept / a.n : 0,
+      metadata: {
+        ...a.metadata,
+        ...Object.fromEntries(Object.entries(a.metadataNums).map(([key, value]) => [key, value.n ? value.sum / value.n : null])),
+      },
     }))
     .sort((a, b) => b.composite - a.composite);
 }
@@ -857,6 +996,7 @@ export const COMPARE_METHODS: AggMethod[] = ["equal", "entropy", "cv", "critic",
 
 export interface CrossMethod {
   methods: AggMethod[];
+  skipped: Partial<Record<AggMethod, string>>;
   entities: string[];
   ranks: Record<string, Record<string, number>>;
   scores: Record<string, Record<string, number>>;
@@ -872,10 +1012,15 @@ export function crossMethodAnalysis(
 ): CrossMethod {
   const ranks: Record<string, Record<string, number>> = {};
   const scores: Record<string, Record<string, number>> = {};
+  const skipped: Partial<Record<AggMethod, string>> = {};
+  const supported: AggMethod[] = [];
   let entities: string[] = [];
   for (const m of methods) {
     const w = computeWeights(ds, m, missing, tx);
+    if (w.error) { skipped[m] = w.error; continue; }
     const b = computeScores(ds, w, standardize, m, missing, tx);
+    if (b.error) { skipped[m] = b.error; continue; }
+    supported.push(m);
     const latest =
       ds.kind === "panel"
         ? latestByEntity(b.rows)
@@ -889,16 +1034,16 @@ export function crossMethodAnalysis(
     });
   }
   const pairs: CrossMethod["spearman"] = [];
-  for (let i = 0; i < methods.length; i++) {
-    for (let j = i + 1; j < methods.length; j++) {
-      const a = methods[i]!;
-      const b = methods[j]!;
+  for (let i = 0; i < supported.length; i++) {
+    for (let j = i + 1; j < supported.length; j++) {
+      const a = supported[i]!;
+      const b = supported[j]!;
       const va = entities.map((e) => scores[a]![e] ?? NaN);
       const vb = entities.map((e) => scores[b]![e] ?? NaN);
       pairs.push({ a, b, rho: spearman(va, vb) });
     }
   }
-  return { methods, entities, ranks, scores, spearman: pairs };
+  return { methods: supported, skipped, entities, ranks, scores, spearman: pairs };
 }
 
 export interface Contribution {
@@ -914,16 +1059,17 @@ export function indicatorContributions(
   weights: WeightTable,
   row: ScoreRow,
 ): Contribution[] {
+  if (!row.contributions) return [];
+  const rowContributions = row.contributions;
   const selected = ds.indicators.filter((i) => i.selected && i.dimensionId);
   const dimName = Object.fromEntries(ds.dimensions.map((d) => [d.id, d.name]));
   const items = selected.map((ind) => {
-    const z = row.z[ind.key] ?? 0;
-    const gw = (weights.indicator[ind.key] ?? 0) * (weights.dimension[ind.dimensionId!] ?? 0);
+    const contrib = rowContributions[ind.key] ?? 0;
     return {
       key: ind.key,
       name: ind.name,
       dim: dimName[ind.dimensionId!] ?? "",
-      contrib: z * gw,
+      contrib,
     };
   });
   const sum = items.reduce((a, x) => a + Math.abs(x.contrib), 0);
