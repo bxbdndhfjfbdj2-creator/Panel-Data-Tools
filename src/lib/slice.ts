@@ -1,4 +1,29 @@
-import type { Dataset } from "./types";
+import type { Dataset, DatasetKind } from "./types";
+
+export type ResultPeriodView = { mode: "latest" | "mean" | "year"; year: number | null };
+
+export function resultPeriodLabel(kind: DatasetKind, view: ResultPeriodView, time: number | null): string {
+  if (view.mode === "mean") return "时期均值";
+  if (kind === "survey" || time == null) return "无时间";
+  return `${time} 年`;
+}
+
+export function resultViewDescription(kind: DatasetKind, view: ResultPeriodView, latestYear: number | null): string {
+  if (kind === "survey") return "问卷样本得分";
+  if (view.mode === "mean") return "所选时期内个体均值";
+  if (view.mode === "year") return `指定年份 ${view.year ?? "无"}`;
+  return latestYear == null
+    ? "各实体最新观测（无有效年份）"
+    : `各实体最新实际观测（最新实际年份 ${latestYear}；各实体年份可能不同）`;
+}
+
+export function describeActualYears(years: number[]): string {
+  if (!years.length) return "无有效年份";
+  const continuous = years.every((year, index) => index === 0 || year === years[index - 1]! + 1);
+  if (continuous) return `${years[0]}–${years.at(-1)}（连续，共 ${years.length} 年）`;
+  if (years.length <= 20) return `${years.join("、")}（非连续，共 ${years.length} 个实际年份）`;
+  return `${years[0]}–${years.at(-1)}（存在年份缺口，共 ${years.length} 个实际年份）`;
+}
 
 export function numericYear(value: unknown): number | null {
   if (value == null || (typeof value === "string" && value.trim() === "")) return null;

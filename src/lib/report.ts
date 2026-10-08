@@ -1,6 +1,6 @@
 import { flagSummary, type CrossMethod, type InfluenceRow } from "./engine";
 import type { SensitivitySummary, YearStability } from "./diagnose";
-import { actualLatestYear, numericYears } from "./slice";
+import { actualLatestYear, describeActualYears, numericYears, resultViewDescription } from "./slice";
 import {
   FLAG_LABEL,
   METHOD_META,
@@ -140,12 +140,12 @@ export function buildMarkdownReport(opts: {
   lines.push(`- 类型：${ds.kind === "panel" ? "面板数据" : "问卷数据"}`);
   lines.push(`- 观测：${ds.rows.length} 行；个体 / 样本 ${entities.size} 个`);
   lines.push(`- 全量观测：${source.rows.length} 行；实体 ${new Set(source.rows.map((r) => String(r[source.entityKey] ?? ""))).size} 个`);
-  if (ds.timeKey) lines.push(`- 时间列：${markdownText(ds.timeKey)}；当前数据实际年份：${years.length ? `${years[0]}–${years.at(-1)}` : "无有效年份"}；最新实际年份：${actualLatestYear(ds) ?? "无"}`);
+  if (ds.timeKey) lines.push(`- 时间列：${markdownText(ds.timeKey)}；当前数据实际年份：${describeActualYears(years)}；最新实际年份：${actualLatestYear(ds) ?? "无"}`);
   if (ds.groupKey) lines.push(`- 分组列：${markdownText(ds.groupKey)}`);
   if (yearFrom != null || yearTo != null) {
     lines.push(`- 分析窗口：${yearFrom ?? "始"}–${yearTo ?? "末"}`);
   }
-  lines.push(`- 结果视图：${view.mode === "mean" ? "所选时期内实体均值" : view.mode === "year" ? `指定年份 ${view.year}` : `各实体最新观测${actualLatestYear(ds) == null ? "（无有效年份，按实体保留首条无时间观测）" : `（最新年份 ${actualLatestYear(ds)}）`}`}`);
+  lines.push(`- 结果视图：${resultViewDescription(ds.kind, view, actualLatestYear(ds))}`);
   lines.push(`- 说明：${markdownText(ds.sourceNote)}`);
   lines.push("");
   lines.push("## 二、指标筛选");
@@ -193,14 +193,14 @@ export function buildMarkdownReport(opts: {
   lines.push(`- 指标实际权重：${selected.map((i) => `${markdownText(i.key)}=${fmt(weights.indicator[i.key] ?? 0, 6)}`).join("；") || "无"}`);
   if (transform?.logMode === "ln") lines.push("- 变换：ln(x)，非正视为缺失");
   if (transform?.logMode === "log1p") lines.push("- 变换：ln(1+x)，负值视为缺失");
-  if (ds.weightKey) lines.push(`- 抽样权重列：${ds.weightKey}（分组均值为加权；个体排名仍按综合指数）`);
+  if (ds.weightKey) lines.push(`- 抽样权重列：${markdownText(ds.weightKey)}（分组均值为加权；个体排名仍按综合指数）`);
   if (dropped) lines.push(`- 因缺失删除 ${dropped} 条观测`);
   if (kmo != null) lines.push(`- KMO：${fmt(kmo, 3)}`);
   if (alpha != null) lines.push(`- Cronbach α：${fmt(alpha, 3)}`);
-  for (const n of weights.notes) lines.push(`- ${n}`);
+  for (const n of weights.notes) lines.push(`- ${markdownText(n)}`);
   lines.push("");
   lines.push("## 五、综合结果");
-  lines.push(`共 ${ranking.length} 个${ds.kind === "panel" ? "个体（所选年份）" : "样本"}纳入排名。`);
+  lines.push(`共 ${ranking.length} 个${ds.kind === "panel" ? "个体" : "样本"}纳入排名（${resultViewDescription(ds.kind, view, actualLatestYear(ds))}）。`);
   lines.push("");
   lines.push("| 排名 | 名称 | 综合指数 | 分组 |");
   lines.push("| --- | --- | --- | --- |");

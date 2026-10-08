@@ -45,6 +45,7 @@ import {
   weightedSd,
 } from "./transform";
 import { median, trimmedMean } from "./npar";
+import { numericYear } from "./slice";
 import {
   assocMatrix,
   mad as madStat,
@@ -694,7 +695,7 @@ function scoreAvailable(
     return {
       rowIndex,
       entity: String(raw[ds.entityKey] ?? ""),
-      time: typeof timeRaw === "number" ? timeRaw : timeRaw != null ? Number(timeRaw) : null,
+      time: numericYear(timeRaw),
       group: ds.groupKey && raw[ds.groupKey] != null ? String(raw[ds.groupKey]) : null,
       composite: composite[i]!,
       closeness: method === "topsis" ? composite[i] : undefined,
@@ -851,7 +852,7 @@ export function computeScores(
     return {
       rowIndex,
       entity: String(raw[ds.entityKey] ?? ""),
-      time: typeof timeRaw === "number" ? timeRaw : timeRaw != null ? Number(timeRaw) : null,
+      time: numericYear(timeRaw),
       group: ds.groupKey && raw[ds.groupKey] != null ? String(raw[ds.groupKey]) : null,
       composite: composite[i]!,
       closeness: closeness01 ? closeness01[i] : undefined,

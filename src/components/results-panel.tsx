@@ -36,7 +36,7 @@ import { displayLabel } from "@/lib/catalog";
 import { toCsv } from "@/lib/csv";
 import { downloadBlob } from "@/lib/persist";
 import { buildMarkdownReport, nextExportFilename } from "@/lib/report";
-import { actualLatestYear, buildAnalysisContext } from "@/lib/slice";
+import { actualLatestYear, buildAnalysisContext, resultPeriodLabel } from "@/lib/slice";
 import { useStudio } from "@/lib/store";
 import { METHOD_META, type AggMethod } from "@/lib/types";
 import { cn, fmt } from "@/lib/utils";
@@ -338,6 +338,8 @@ export function ResultsPanel() {
             <RankTable
               rows={ranking}
               dimensions={ds.dimensions}
+              kind={ds.kind}
+              view={view}
               active={entity}
               onPick={setFocusEntity}
               max={maxC}
@@ -613,14 +615,14 @@ function panelRankHint(kind: string, mode: "latest" | "mean", year: number | nul
   if (kind !== "panel") return "";
   if (mode === "mean") return " · 个体时期均值排名";
   if (year != null) return ` · ${year} 年排名`;
-  return " · 排名取最新年份";
+  return " · 各实体取最新实际观测";
 }
 
 function rankHeading(kind: string, mode: "latest" | "mean", year: number | null) {
   if (kind !== "panel") return "个体得分";
   if (mode === "mean") return "时期均值排名";
   if (year != null) return `${year} 年排名`;
-  return "最新年份排名";
+  return "各实体最新观测排名";
 }
 
 function sensitivityReason(reason: string | undefined) {
@@ -640,6 +642,8 @@ function bandText(ci: Record<string, { lo: number; hi: number }>, entity: string
 function RankTable({
   rows,
   dimensions,
+  kind,
+  view,
   active,
   onPick,
   max,
@@ -647,6 +651,8 @@ function RankTable({
 }: {
   rows: { entity: string; composite: number; group: string | null; time: number | null }[];
   dimensions: { id: string; name: string }[];
+  kind: "panel" | "survey";
+  view: { mode: "latest" | "mean" | "year"; year: number | null };
   active: string | null;
   onPick: (e: string) => void;
   max: number;
@@ -678,6 +684,7 @@ function RankTable({
               <td className="px-2 py-2">
                 <div className="font-medium">{r.entity}</div>
                 {r.group && <div className="text-2xs text-subtle">{r.group}</div>}
+                <div className="text-2xs text-muted">{resultPeriodLabel(kind, view, r.time)}</div>
               </td>
               <td className="px-2 py-2 tabular font-medium">{fmt(r.composite, 1)}</td>
               <td className="hidden px-2 py-2 tabular text-muted md:table-cell">

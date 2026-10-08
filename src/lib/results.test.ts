@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Dataset } from "./types.ts";
 import { computeScores, computeWeights, crossMethodAnalysis, leaveOneOutInfluence, selectResultRows } from "./engine.ts";
 import { bootstrapIntervals, yearStability } from "./diagnose.ts";
-import { actualLatestYear, buildAnalysisContext, numericYears } from "./slice.ts";
+import { actualLatestYear, buildAnalysisContext, describeActualYears, numericYears, resultPeriodLabel, resultViewDescription } from "./slice.ts";
 import { allocateExportFilename, buildMarkdownReport, claimSessionExportFilename, markdownText } from "./report.ts";
 
 function panelFixture(): Dataset {
@@ -41,6 +41,21 @@ test("analysis context uses one year window and never treats null time as year z
   const unavailableYear = buildAnalysisContext(source, 2020, 2021, "latest", 2022);
   assert.deepEqual(unavailableYear.actualYears, [2020, 2021]);
   assert.deepEqual(unavailableYear.view, { mode: "latest", year: null });
+});
+
+test("ranking period labels distinguish actual observations, period means, and survey rows", () => {
+  assert.equal(resultPeriodLabel("panel", { mode: "latest", year: null }, 2021), "2021 年");
+  assert.equal(resultPeriodLabel("panel", { mode: "year", year: 2020 }, 2020), "2020 年");
+  assert.equal(resultPeriodLabel("panel", { mode: "mean", year: null }, null), "时期均值");
+  assert.equal(resultPeriodLabel("panel", { mode: "latest", year: null }, null), "无时间");
+  assert.equal(resultPeriodLabel("survey", { mode: "latest", year: null }, null), "无时间");
+  assert.equal(resultViewDescription("panel", { mode: "latest", year: null }, 2021), "各实体最新实际观测（最新实际年份 2021；各实体年份可能不同）");
+  assert.equal(resultViewDescription("panel", { mode: "year", year: 2020 }, 2021), "指定年份 2020");
+  assert.equal(resultViewDescription("panel", { mode: "mean", year: null }, 2021), "所选时期内个体均值");
+  assert.equal(resultViewDescription("survey", { mode: "latest", year: null }, null), "问卷样本得分");
+  assert.equal(describeActualYears([]), "无有效年份");
+  assert.equal(describeActualYears([2020, 2021, 2022]), "2020–2022（连续，共 3 年）");
+  assert.equal(describeActualYears([2020, 2022]), "2020、2022（非连续，共 2 个实际年份）");
 });
 
 test("latest actual year scans large datasets without spreading an array into Math.max", () => {
@@ -93,12 +108,13 @@ test("resampling sensitivity reports deterministic B and explicit disabled reaso
 test("report captures actual run context, escapes table text, and separates full from window counts", () => {
   const source = panelFixture();
   const current = { ...source, rows: source.rows.filter((row) => row.year === 2021) };
+  current.weightKey = "weight|_key";
   const weights = computeWeights(current, "equal");
   const bundle = computeScores(current, weights, "minmax", "equal");
   const report = buildMarkdownReport({
     dataset: current, sourceDataset: source, method: "equal", standardize: "minmax", missingMode: "listwise",
     transform: { winsor: 0.05, logMode: "ln" }, yearFrom: 2021, yearTo: 2021,
-    screen: [], weights, ranking: bundle.rows, kmo: null, dropped: 0, alpha: null,
+    screen: [], weights: { ...weights, notes: ["note | with _emphasis"] }, ranking: bundle.rows, kmo: null, dropped: 0, alpha: null,
     view: { mode: "year", year: 2021 },
     sensitivity: { ranges: { e0: { lo: 12, hi: 18 } }, requestedB: 36, effectiveB: 29, seed: 2026, status: "active" },
   });
@@ -106,6 +122,10 @@ test("report captures actual run context, escapes table text, and separates full
   assert.match(report, /观测：6 行/);
   assert.match(report, /method=equal; standardize=minmax; missing=listwise; transform=winsor=0\.05, logMode=ln/);
   assert.match(report, /运行 ID \/ 数据哈希：[0-9a-f]{16}/);
+  assert.match(report, /指定年份 2021/);
+  assert.match(report, /当前数据实际年份：2021–2021（连续，共 1 年）/);
+  assert.ok(report.includes("抽样权重列：weight\\|\\_key"));
+  assert.ok(report.includes("note \\| with \\_emphasis"));
   assert.match(report, /指定年份 2021/);
   assert.match(report, /X\\\|one/);
   assert.match(report, /A\\\|one/);

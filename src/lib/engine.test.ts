@@ -164,3 +164,25 @@ test("formative survey indicators do not receive reflective alpha screening flag
   assert.ok(rows.every((r) => r.itemTotal == null));
   assert.ok(rows.every((r) => !r.flags.includes("low_item_total") && !r.flags.includes("hurts_alpha")));
 });
+
+test("score rows preserve missing and invalid time values as null in both scoring paths", () => {
+  const base = fixture([[1, 2, 3, 4], [4, 3, 2, 1]]);
+  const ds = {
+    ...base,
+    kind: "panel" as const,
+    timeKey: "year",
+    rows: [
+      { ...base.rows[0]!, year: "" },
+      { ...base.rows[1]!, year: "   " },
+      { ...base.rows[2]!, year: "not-a-year" },
+      { ...base.rows[3]!, year: "2020" },
+    ],
+  };
+  const weights = computeWeights(ds, "equal");
+  for (const missing of ["listwise", "pairwise"] as const) {
+    const scored = computeScores(ds, weights, "minmax", "equal", missing);
+    assert.equal(scored.rows.length, 4);
+    assert.deepEqual(scored.rows.map((row) => row.time), [null, null, null, 2020]);
+    assert.ok(scored.rows.every((row) => row.time !== 0));
+  }
+});
