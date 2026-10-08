@@ -15,7 +15,7 @@ import type {
 export const WORKSPACE_KEY = "hengce.workspace.v1";
 
 export interface WorkspaceSnap {
-  v: 1;
+  v: 2;
   savedAt: number;
   step: StepId;
   dataset: Dataset;
@@ -30,6 +30,10 @@ export interface WorkspaceSnap {
   resultMode?: "latest" | "mean";
   heatSelectedOnly?: boolean;
 }
+
+/** Input shape for snapshots written by the previous v1 workspace schema. */
+export type LegacyWorkspaceSnapV1 = Omit<WorkspaceSnap, "v"> & { v: 1 };
+export type WorkspaceInputSnap = WorkspaceSnap | LegacyWorkspaceSnapV1;
 
 type ParseWorkspaceResult =
   | { ok: true; value: WorkspaceSnap }
@@ -69,7 +73,7 @@ function error(message: string): ParseWorkspaceResult {
   return { ok: false, error: `方案校验失败：${message}` };
 }
 
-function validateDataset(value: unknown): { value: Dataset } | { error: string } {
+function validateDataset(value: unknown, migrateLegacyCatalog: boolean): { value: Dataset } | { error: string } {
   if (!isRecord(value)) return { error: "dataset 必须是对象。" };
   const ds = value;
   const requiredStrings = ["id", "name", "description", "sourceNote", "entityKey", "goalName"];
@@ -154,9 +158,11 @@ function validateDataset(value: unknown): { value: Dataset } | { error: string }
     if (ds.rows.length > 0 && !rowKeys.has(indicator.key)) return { error: `指标「${indicator.key}」未出现在数据列中。` };
   }
 
+  let normalizedCatalog: Dataset["catalog"];
   if (ds.catalog !== undefined) {
     if (!Array.isArray(ds.catalog)) return { error: "dataset.catalog 必须是数组。" };
     const catalogKeys = new Set<string>();
+    normalizedCatalog = [];
     for (const [index, item] of ds.catalog.entries()) {
       if (!isRecord(item) || typeof item.key !== "string" || !item.key.trim() || typeof item.name !== "string" || typeof item.battery !== "string" ||
         !isFiniteNumber(item.fill) || item.fill < 0 || item.fill > 1 || !Number.isSafeInteger(item.nUnique) || (item.nUnique as number) < 0) {
@@ -164,7 +170,11 @@ function validateDataset(value: unknown): { value: Dataset } | { error: string }
       }
       if (catalogKeys.has(item.key)) return { error: `catalog key「${item.key}」重复。` };
       catalogKeys.add(item.key);
-      if (!rowKeys.has(item.key)) return { error: `catalog key「${item.key}」未出现在数据列中。` };
+      if (!rowKeys.has(item.key)) {
+        if (migrateLegacyCatalog) continue;
+        return { error: `catalog key「${item.key}」未出现在数据列中。` };
+      }
+      normalizedCatalog.push(item as unknown as NonNullable<Dataset["catalog"]>[number]);
     }
   }
   if (ds.valueLabels !== undefined) {
@@ -176,7 +186,8 @@ function validateDataset(value: unknown): { value: Dataset } | { error: string }
     }
   }
 
-  return { value: ds as unknown as Dataset };
+  const normalizedDataset = normalizedCatalog === undefined ? ds : { ...ds, catalog: normalizedCatalog };
+  return { value: normalizedDataset as unknown as Dataset };
 }
 
 function validateThresholds(value: unknown): { value: ScreeningThresholds } | { error: string } {
@@ -194,13 +205,15 @@ function validateThresholds(value: unknown): { value: ScreeningThresholds } | { 
 /** Returns a validated, defaulted snapshot and a field-specific reason on failure. */
 export function parseWorkspaceResult(raw: unknown): ParseWorkspaceResult {
   if (!isRecord(raw)) return error("根节点必须是对象。");
-  if (raw.v !== 1) return error("不支持的方案版本。请使用 v1 方案文件。");
+  if (raw.v !== 1 && raw.v !== 2) return error("不支持的方案版本。当前支持 v1 迁移和 v2 方案文件。");
   if (!isFiniteNumber(raw.savedAt) || raw.savedAt < 0) return error("savedAt 必须是非负有限数。");
   if (typeof raw.step !== "string" || !STEPS.has(raw.step as StepId)) return error("step 不属于已知工作步骤。");
   if (typeof raw.method !== "string" || !METHODS.has(raw.method as AggMethod)) return error("method 不属于已知聚合方法。");
   if (raw.standardize !== "minmax" && raw.standardize !== "zscore") return error("standardize 只能是 minmax 或 zscore。");
 
-  const dataset = validateDataset(raw.dataset);
+  // v1 may contain catalog entries for candidates beyond the materialized row columns.
+  // Keep the usable entries and drop only those candidates, then always return canonical v2.
+  const dataset = validateDataset(raw.dataset, raw.v === 1);
   if ("error" in dataset) return error(dataset.error);
   const thresholds = validateThresholds(raw.thresholds);
   if ("error" in thresholds) return error(thresholds.error);
@@ -232,7 +245,7 @@ export function parseWorkspaceResult(raw: unknown): ParseWorkspaceResult {
   return {
     ok: true,
     value: {
-      v: 1,
+      v: 2,
       savedAt: raw.savedAt,
       step: raw.step as StepId,
       dataset: dataset.value,
@@ -274,7 +287,7 @@ export function readWorkspace(): WorkspaceSnap | null {
   }
 }
 
-export function writeWorkspace(snap: WorkspaceSnap, storage: WorkspaceStorage | null = getWorkspaceStorage()): WorkspaceWriteResult {
+export function writeWorkspace(snap: WorkspaceInputSnap, storage: WorkspaceStorage | null = getWorkspaceStorage()): WorkspaceWriteResult {
   if (!storage) return { ok: false, error: "浏览器本地存储不可用，当前修改未保存。" };
   const parsed = parseWorkspaceResult(snap);
   if (!parsed.ok) return { ok: false, error: `当前方案无法保存：${parsed.error}` };

@@ -17,7 +17,7 @@ import type {
 } from "./types";
 import { uid } from "./utils";
 import { parseWorkspace } from "./persist";
-import type { WorkspaceSnap } from "./persist";
+import type { WorkspaceInputSnap, WorkspaceSnap } from "./persist";
 import { sliceByYear } from "./slice";
 import { directionFromName, materializeKeys } from "./catalog";
 
@@ -77,7 +77,7 @@ interface StudioState {
   setResultMode: (m: "latest" | "mean") => void;
   setHeatSelectedOnly: (v: boolean) => void;
   setFocusEntity: (e: string | null) => void;
-  hydrate: (snap: WorkspaceSnap) => void;
+  hydrate: (snap: WorkspaceInputSnap) => void;
   snapshot: () => Omit<WorkspaceSnap, "savedAt">;
   reset: () => void;
 }
@@ -453,7 +453,7 @@ export const useStudio = create<StudioState>()((set, get) => ({
   snapshot: () => {
     const s = get();
     return {
-      v: 1 as const,
+      v: 2 as const,
       step: s.step,
       dataset: s.dataset,
       thresholds: s.thresholds,

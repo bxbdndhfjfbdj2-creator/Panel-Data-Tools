@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SAMPLE_DATASETS } from "./datasets.ts";
 import { parseWorkspace, parseWorkspaceResult, WORKSPACE_KEY, writeWorkspace } from "./persist.ts";
-import type { WorkspaceSnap, WorkspaceStorage } from "./persist.ts";
+import type { WorkspaceInputSnap, WorkspaceSnap, WorkspaceStorage } from "./persist.ts";
 import { useStudio } from "./store.ts";
 
 function makeSnapshot(): WorkspaceSnap {
   return {
-    v: 1,
+    v: 2,
     savedAt: 1_700_000_000_000,
     step: "data",
     dataset: structuredClone(SAMPLE_DATASETS[0]!),
@@ -22,6 +22,39 @@ function makeSnapshot(): WorkspaceSnap {
     resultMode: "latest",
     heatSelectedOnly: false,
   };
+}
+
+function makeLegacyWideCatalogSnapshot(): Record<string, unknown> {
+  const snap = makeSnapshot() as unknown as Record<string, unknown>;
+  snap.v = 1;
+  const dataset = snap.dataset as WorkspaceSnap["dataset"];
+  const row: Record<string, string | number | null> = { [dataset.entityKey]: "entity-1" };
+  for (const [key, value] of [
+    [dataset.timeKey, 2020],
+    [dataset.groupKey, "group-1"],
+    [dataset.weightKey, 1],
+  ] as const) {
+    if (key) row[key] = value;
+  }
+  for (let index = 1; index <= 60; index += 1) row[`q${index}`] = index;
+  dataset.rows = [row];
+  const dimensionId = dataset.dimensions[0]?.id ?? null;
+  dataset.indicators = Array.from({ length: 60 }, (_, index) => ({
+    key: `q${index + 1}`,
+    name: `题目 ${index + 1}`,
+    direction: 1 as const,
+    dimensionId,
+    selected: true,
+    weight: 1 / 60,
+  }));
+  dataset.catalog = Array.from({ length: 81 }, (_, index) => ({
+    key: `q${index + 1}`,
+    name: `题目 ${index + 1}`,
+    fill: 1,
+    battery: "battery-a",
+    nUnique: 5,
+  }));
+  return snap;
 }
 
 test("workspace schema validates enums, finite values, uniqueness, and references", () => {
@@ -70,6 +103,7 @@ test("workspace schema rejects empty or duplicate catalog keys and unresolved id
 
 test("workspace schema defaults optional legacy fields explicitly", () => {
   const oldSnap = makeSnapshot() as unknown as Record<string, unknown>;
+  oldSnap.v = 1;
   delete oldSnap.missingMode;
   delete oldSnap.transform;
   delete oldSnap.yearFrom;
@@ -88,8 +122,38 @@ test("workspace schema defaults optional legacy fields explicitly", () => {
   assert.equal(parsed.heatSelectedOnly, false);
 });
 
+test("legacy v1 wide catalogs migrate by dropping unmaterialized candidates", () => {
+  const legacy = makeLegacyWideCatalogSnapshot();
+  const result = parseWorkspaceResult(legacy);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.v, 2);
+  assert.equal(result.value.dataset.catalog?.length, 60);
+  assert.ok(result.value.dataset.catalog?.some((item) => item.key === "q60"));
+  assert.ok(!result.value.dataset.catalog?.some((item) => item.key === "q61"));
+  assert.equal(result.value.dataset.rows[0]?.q61, undefined);
+  assert.ok(!result.value.dataset.indicators.some((indicator) => indicator.key === "q61"));
+
+  let stored = "";
+  const storage: WorkspaceStorage = { setItem(_key, value) { stored = value; } };
+  const writeResult = writeWorkspace(legacy as unknown as WorkspaceInputSnap, storage);
+  assert.equal(writeResult.ok, true);
+  const written = JSON.parse(stored) as WorkspaceSnap;
+  assert.equal(written.v, 2);
+  assert.ok(!written.dataset.catalog?.some((item) => item.key === "q61"));
+  assert.equal(written.dataset.rows[0]?.q61, undefined);
+
+  useStudio.getState().hydrate(legacy as unknown as WorkspaceInputSnap);
+  assert.equal(useStudio.getState().dataset.rows[0]?.q61, undefined);
+  assert.ok(!useStudio.getState().dataset.catalog?.some((item) => item.key === "q61"));
+
+  const v2 = { ...legacy, v: 2 };
+  assert.equal(parseWorkspaceResult(v2).ok, false);
+});
+
 test("store hydrate accepts old optional-field snapshots and ignores invalid snapshots", () => {
   const oldSnap = makeSnapshot() as unknown as Record<string, unknown>;
+  oldSnap.v = 1;
   delete oldSnap.missingMode;
   delete oldSnap.transform;
   delete oldSnap.yearFrom;
@@ -98,7 +162,7 @@ test("store hydrate accepts old optional-field snapshots and ignores invalid sna
   delete oldSnap.resultMode;
   delete oldSnap.heatSelectedOnly;
 
-  useStudio.getState().hydrate(oldSnap as unknown as WorkspaceSnap);
+  useStudio.getState().hydrate(oldSnap as unknown as WorkspaceInputSnap);
   const state = useStudio.getState();
   assert.equal(state.missingMode, "listwise");
   assert.deepEqual(state.transform, { winsor: 0, logMode: "off" });
