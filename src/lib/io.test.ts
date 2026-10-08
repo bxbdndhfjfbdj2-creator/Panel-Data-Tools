@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { parseDta } from "./dta.ts";
-import { datasetFromDta, datasetFromSpreadsheet } from "./io.ts";
+import { datasetFromDta, datasetFromSpreadsheet, SPREADSHEET_IMPORT_LIMITS, validateSpreadsheetDimensions } from "./io.ts";
 import { datasetFromCsv, datasetFromParsed } from "./csv.ts";
 import { computeScores, computeWeights, groupMeans, screenDataset } from "./engine.ts";
 import { applyTransform, quantile, samplingWeights, weightedMean, winsorize } from "./transform.ts";
@@ -222,6 +222,14 @@ test("Excel text identifiers retain leading zeroes and unsafe integer digits", a
   assert.equal(ds.rows[0]?.record_id, "000123");
   assert.equal(ds.rows[1]?.record_id, "9007199254740993");
   assert.equal(ds.rows[1]?.measure, 2);
+});
+
+test("Excel import bounds reject oversized worksheet dimensions before row conversion", () => {
+  assert.equal(SPREADSHEET_IMPORT_LIMITS.maxBytes, 120 * 1024 * 1024);
+  assert.throws(() => validateSpreadsheetDimensions(100_001, 2, "Oversized"), /超出导入限制.*100,000 行/);
+  assert.throws(() => validateSpreadsheetDimensions(10, 501, "Oversized"), /超出导入限制.*500 列/);
+  assert.throws(() => validateSpreadsheetDimensions(5_000, 500, "Oversized"), /2,000,000 个单元格/);
+  assert.doesNotThrow(() => validateSpreadsheetDimensions(25_000, 80, "Within limit"));
 });
 
 test("engine scores include weight 1 by default", () => {

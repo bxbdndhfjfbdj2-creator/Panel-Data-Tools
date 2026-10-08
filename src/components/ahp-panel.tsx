@@ -84,6 +84,7 @@ function AhpForm({ onApplied }: { onApplied: () => void }) {
               </div>
               <Slider
                 className="mt-1"
+                aria-label={`AHP 判断：${left.name} 相对于 ${right.name} 的重要性`}
                 min={-8}
                 max={8}
                 step={1}

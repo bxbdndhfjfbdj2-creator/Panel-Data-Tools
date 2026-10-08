@@ -94,7 +94,7 @@ export function Studio() {
         </main>
 
         <footer className="border-t border-border px-4 py-4 text-center text-2xs text-subtle sm:px-6">
-          筛选、熵权、CRITIC、主成分、AHP 与 TOPSIS 均在浏览器本地完成，数据不会上传。示意样本不可作为正式统计引用。
+          分析数据在浏览器内计算，不由应用上传；方案保存在本机浏览器。页面会加载托管平台资源和 Google Fonts。示意样本不可作为正式统计引用。
         </footer>
       </div>
       <Toaster

@@ -261,7 +261,14 @@ function Thresh({
         <span className="text-muted">{label}</span>
         <span className="tabular font-medium">{value}</span>
       </div>
-      <Slider min={min} max={max} step={1} value={[v]} onValueChange={(x) => onChange(x[0] ?? v)} />
+      <Slider
+        aria-label={label}
+        min={min}
+        max={max}
+        step={1}
+        value={[v]}
+        onValueChange={(x) => onChange(x[0] ?? v)}
+      />
     </div>
   );
 }

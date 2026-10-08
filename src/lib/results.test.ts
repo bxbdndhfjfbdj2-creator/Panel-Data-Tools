@@ -111,7 +111,7 @@ test("report captures actual run context, escapes table text, and separates full
   const current = {
     ...source,
     rows: source.rows.filter((row) => row.year === 2021),
-    dimensions: source.dimensions.map((dim) => ({ ...dim, weight: 4 })),
+    dimensions: source.dimensions.map((dim) => ({ ...dim, name: "D|one ``` embedded", weight: 4 })),
     indicators: source.indicators.map((ind) => ind.key === "x1" ? { ...ind, direction: -1 as const, weight: 0.8, logMode: "log1p" as const } : ind.key === "x2" ? { ...ind, weight: 0.2 } : ind),
   };
   current.weightKey = "weight|_key";
@@ -130,7 +130,8 @@ test("report captures actual run context, escapes table text, and separates full
   assert.match(report, /method=equal; standardize=minmax; missing=listwise; transform=winsor=0\.05, logMode=ln/);
   const runId = report.match(/运行 ID：([0-9a-f]{16})/)?.[1];
   assert.ok(runId);
-  const payloadJson = report.match(/```json\n([\s\S]*?)\n```/)?.[1];
+  assert.match(report, /````json\n/);
+  const payloadJson = report.match(/(`{3,})json\n([\s\S]*?)\n\1/)?.[2];
   assert.ok(payloadJson);
   const hashPayload = JSON.parse(payloadJson) as {
     selected: { key: string; direction: number; logMode: string; weight: number; dimensionId: string }[];
@@ -139,7 +140,7 @@ test("report captures actual run context, escapes table text, and separates full
   };
   assert.equal(stableDataHash(hashPayload), runId);
   assert.deepEqual(hashPayload.selected.find((i) => i.key === "x1"), { key: "x1", direction: -1, logMode: "log1p", weight: 0.8, dimensionId: "d1" });
-  assert.deepEqual(hashPayload.dimensions.find((d) => d.id === "d1"), { id: "d1", name: "D|one", weight: 4 });
+  assert.deepEqual(hashPayload.dimensions.find((d) => d.id === "d1"), { id: "d1", name: "D|one ``` embedded", weight: 4 });
   assert.deepEqual(hashPayload.datasetRoles, { kind: "panel", entityKey: "id", timeKey: "year", groupKey: "group", weightKey: "weight|_key", idKey: null });
   assert.match(payloadJson, /"maxMissing": 0\.2/);
   assert.match(payloadJson, /"minCv": 0\.03/);
@@ -152,7 +153,7 @@ test("report captures actual run context, escapes table text, and separates full
   assert.match(report, /A\\\|one/);
   assert.match(report, /有效 B=29/);
   assert.match(report, /不是完整置信区间/);
-  assert.match(report, /维度权重（dimension id \/ name \/ 配置 weight → 实际计算权重）：d1 \/ D\\\|one：4\.000000 → 1\.000000/);
+  assert.match(report, /维度权重（dimension id \/ name \/ 配置 weight → 实际计算权重）：d1 \/ D\\\|one .*：4\.000000 → 1\.000000/);
   assert.match(report, /指标权重（key \/ dimensionId \/ 配置 weight → 维内实际权重 → 全局实际权重）：x1 \/ d1：0\.800000 → 0\.333333 → 0\.333333/);
   assert.match(report, /筛选阈值：最大缺失率 20\.0%/);
   assert.match(report, /x1：负向；logMode=指标覆盖（log1p）/);

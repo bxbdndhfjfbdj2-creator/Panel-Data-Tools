@@ -260,6 +260,7 @@ export function ResultsPanel() {
           {ds.kind === "panel" && years.length > 0 && (
             <SelectNative
               className="h-10 w-36"
+              aria-label="面板结果的观察时期"
               value={view.mode === "mean" ? "mean" : view.mode === "year" ? String(view.year) : ""}
               onChange={(e) => {
                 if (e.target.value === "mean") setResultMode("mean");
@@ -354,6 +355,7 @@ export function ResultsPanel() {
             <h3 className="text-sm font-medium">维度剖面</h3>
             <SelectNative
               className="h-11 w-36 text-xs"
+              aria-label="选择查看维度剖面的对象"
               value={entity ?? ""}
               onChange={(e) => setFocusEntity(e.target.value)}
             >
@@ -676,10 +678,18 @@ function RankTable({
             <tr
               key={r.entity + String(r.time)}
               className={cn(
-                "cursor-pointer border-b border-border/60",
+                "cursor-pointer border-b border-border/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40",
                 active === r.entity && "bg-accent-soft",
               )}
+              tabIndex={0}
+              aria-label={`第 ${i + 1} 名 ${r.entity}，指数 ${fmt(r.composite, 1)}；回车或空格查看维度剖面`}
               onClick={() => onPick(r.entity)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onPick(r.entity);
+                }
+              }}
             >
               <td className="px-2 py-2 tabular text-subtle">{i + 1}</td>
               <td className="px-2 py-2">

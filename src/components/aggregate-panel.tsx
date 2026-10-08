@@ -276,6 +276,7 @@ export function AggregatePanel() {
                         <span className="tabular">{fmt(ind.weight, 2)}</span>
                       </div>
                       <Slider
+                        aria-label={`${ind.name} 在 ${dim.name} 中的指标权重`}
                         min={0}
                         max={100}
                         step={1}

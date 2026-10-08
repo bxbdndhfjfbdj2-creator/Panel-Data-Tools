@@ -146,6 +146,7 @@ export function SystemPanel() {
                   <span className="tabular font-medium">{fmt(dim.weight, 2)}</span>
                 </div>
                 <Slider
+                  aria-label={`${dim.name} 维度权重`}
                   min={0}
                   max={100}
                   step={1}
@@ -178,6 +179,8 @@ export function SystemPanel() {
                     <button
                       type="button"
                       onClick={() => setDirection(ind.key, ind.direction === 1 ? -1 : 1)}
+                      aria-label={`${ind.name}方向，当前${ind.direction === 1 ? "正向" : "负向"}，按下切换`}
+                      aria-pressed={ind.direction === 1}
                       className={cn(
                         "min-h-8 shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium",
                         ind.direction === 1 ? "bg-ok-soft text-ok" : "bg-danger-soft text-danger",
@@ -188,6 +191,7 @@ export function SystemPanel() {
                     <button
                       type="button"
                       className="min-h-8 shrink-0 text-2xs text-muted hover:text-fg"
+                      aria-label={`将指标 ${ind.name} 移出当前维度`}
                       onClick={() => assignIndicator(ind.key, null)}
                     >
                       移出

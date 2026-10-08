@@ -4,6 +4,34 @@ import type { DataRow, Dataset } from "./types";
 import { toNum } from "./stats";
 
 const MAX_BYTES = 120 * 1024 * 1024;
+const MAX_SHEETS = 100;
+const MAX_ROWS = 100_000;
+const MAX_COLUMNS = 500;
+const MAX_RECTANGULAR_CELLS = 2_000_000;
+
+export function validateSpreadsheetDimensions(rows: number, columns: number, sheetName: string): void {
+  if (
+    !Number.isSafeInteger(rows) || !Number.isSafeInteger(columns) || rows <= 0 || columns <= 0 ||
+    rows > MAX_ROWS || columns > MAX_COLUMNS || rows * columns > MAX_RECTANGULAR_CELLS
+  ) {
+    throw new Error(
+      `工作表「${sheetName}」超出导入限制（最多 ${MAX_ROWS.toLocaleString()} 行、${MAX_COLUMNS} 列且不超过 ${MAX_RECTANGULAR_CELLS.toLocaleString()} 个单元格）。请先裁剪工作表。`,
+    );
+  }
+}
+
+function checkedSheetRange(ref: string, XLSX: typeof import("xlsx"), sheetName: string) {
+  let range: ReturnType<typeof XLSX.utils.decode_range>;
+  try {
+    range = XLSX.utils.decode_range(ref);
+  } catch {
+    throw new Error(`工作表「${sheetName}」的单元格范围无效。`);
+  }
+  const rows = range.e.r - range.s.r + 1;
+  const columns = range.e.c - range.s.c + 1;
+  validateSpreadsheetDimensions(rows, columns, sheetName);
+  return { range, rows };
+}
 
 function uniqueHeaders(raw: string[]): string[] {
   const used = new Set<string>();
@@ -68,6 +96,9 @@ export async function datasetFromSpreadsheet(name: string, buffer: ArrayBuffer):
     throw new Error(`无法解析 Excel 文件：${error instanceof Error ? error.message : "文件格式无效"}`);
   }
   if (!wb.SheetNames.length) throw new Error("工作簿没有工作表。");
+  if (wb.SheetNames.length > MAX_SHEETS) {
+    throw new Error(`工作簿超过 ${MAX_SHEETS} 个工作表，请先删去无关工作表。`);
+  }
   let bestName = wb.SheetNames[0]!;
   let bestN = 0;
   for (const n of wb.SheetNames) {
@@ -75,8 +106,7 @@ export async function datasetFromSpreadsheet(name: string, buffer: ArrayBuffer):
     if (!sh) continue;
     const ref = sh["!ref"];
     if (!ref) continue;
-    const range = XLSX.utils.decode_range(ref);
-    const nrows = range.e.r - range.s.r + 1;
+    const { rows: nrows } = checkedSheetRange(ref, XLSX, n);
     if (nrows > bestN) {
       bestN = nrows;
       bestName = n;
@@ -110,3 +140,11 @@ export async function datasetFromFile(file: File): Promise<Dataset> {
   }
   return datasetFromCsv(file.name, await file.text());
 }
+
+export const SPREADSHEET_IMPORT_LIMITS = {
+  maxBytes: MAX_BYTES,
+  maxSheets: MAX_SHEETS,
+  maxRows: MAX_ROWS,
+  maxColumns: MAX_COLUMNS,
+  maxRectangularCells: MAX_RECTANGULAR_CELLS,
+} as const;

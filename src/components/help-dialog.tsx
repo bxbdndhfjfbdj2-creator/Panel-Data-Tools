@@ -30,7 +30,7 @@ const SECTIONS = [
   },
   {
     title: "文件格式",
-    body: "可在浏览器本地读取 CSV/TSV、Excel 与 Stata 117–119。宽表按完整度预选，其余可按题组搜索加入（最多 80 列）。Stata 值标签会用于分类列；李克特数字保留。超过 120 MB 请先裁子集。结果页可导出 Markdown 报告与 Stata/R 草图。",
+    body: "可在浏览器本地读取 CSV/TSV、Excel 与 Stata 117–119。Excel 默认选数据行最多的工作表；工作表最多 100 张、每张 100,000 行和 500 列，且不超过 2,000,000 个范围单元格。单文件上限 120 MiB。宽表可按题组搜索加入，最多纳入 80 列。空值不会自动把 97/99 等字符串编码转换为缺失；Stata 值标签保留为元数据。结果页可导出 Markdown 报告与 Stata/R 草图。",
   },
 ];
 
@@ -46,7 +46,7 @@ export function HelpButton() {
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogTitle>方法说明</DialogTitle>
           <DialogDescription>
-            全部计算在浏览器本地完成，数据不会上传。示意样本只用于演示数量级与流程。
+            导入数据与分析在当前浏览器内处理；应用不会把分析数据发送到服务端。方案会自动写入当前浏览器的 localStorage。页面仍会请求托管平台资源与 Google Fonts；网络、浏览器扩展和托管平台日志不属于此本地处理边界。示意样本只用于演示流程。
           </DialogDescription>
           <ol className="mt-4 space-y-4">
             {SECTIONS.map((s) => (

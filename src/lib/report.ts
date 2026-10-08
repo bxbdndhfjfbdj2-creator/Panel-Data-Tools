@@ -37,6 +37,12 @@ export function stableDataHash(value: unknown): string {
   return `${(hashA >>> 0).toString(16).padStart(8, "0")}${(hashB >>> 0).toString(16).padStart(8, "0")}`;
 }
 
+function fencedBlock(content: string, language = ""): string[] {
+  const runs = content.match(/`+/g) ?? [];
+  const fence = "`".repeat(Math.max(3, ...runs.map((run) => run.length + 1)));
+  return [`${fence}${language}`, content, fence];
+}
+
 export function allocateExportFilename(base: string, extension: string, existing: Iterable<string>): string {
   const forbidden = new Set(["\\", "/", ":", "*", "?", '"', "<", ">", "|"]);
   const safeBase = Array.from(base.normalize("NFKC"), (char) => {
@@ -167,9 +173,7 @@ export function buildMarkdownReport(opts: {
   lines.push(`生成时间：${new Date().toLocaleString("zh-CN")}`);
   lines.push(`- 运行版本：衡策结果报告 v2；运行 ID：${runId}；数据哈希：${dataHash}`);
   lines.push("- 运行哈希算法：衡策双 32 位 FNV-1a 配置哈希；下面的 JSON 是运行 ID 的完整输入（dataHash 由数据集 ID 与当前窗口数据行生成），数值为可复算的原始精度配置。");
-  lines.push("```json");
-  lines.push(JSON.stringify(hashPayload, null, 2));
-  lines.push("```");
+  lines.push(...fencedBlock(JSON.stringify(hashPayload, null, 2), "json"));
   lines.push("");
   lines.push("## 一、数据");
   lines.push(`- 名称：${markdownText(ds.name)}`);
@@ -295,20 +299,19 @@ export function buildCodebook(ds: Dataset): string {
   lines.push("");
   lines.push("## 层级");
   lines.push("");
-  lines.push("```");
-  lines.push(markdownText(ds.goalName));
+  const hierarchyLines = [markdownText(ds.goalName)];
   for (const dim of ds.dimensions) {
     const members = ds.indicators.filter((i) => i.dimensionId === dim.id);
-    lines.push(`├─ ${markdownText(dim.name)}  ${fmtPct(dim.weight, 0)}`);
+    hierarchyLines.push(`├─ ${markdownText(dim.name)}  ${fmtPct(dim.weight, 0)}`);
     members.forEach((ind, i) => {
       const last = i === members.length - 1;
       const mark = ind.selected ? "" : " [未纳入]";
-      lines.push(
+      hierarchyLines.push(
         `│  ${last ? "└" : "├"}─ ${markdownText(ind.name)}${ind.unit ? ` (${markdownText(ind.unit)})` : ""}  ${ind.direction === 1 ? "+" : "−"}${mark}`,
       );
     });
   }
-  lines.push("```");
+  lines.push(...fencedBlock(hierarchyLines.join("\n")));
   lines.push("");
   lines.push("## 字典");
   lines.push("");
