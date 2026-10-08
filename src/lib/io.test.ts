@@ -140,6 +140,30 @@ test("CSV preserves leading zeroes for an inferred entity column without a prese
   assert.deepEqual(ds.rows.map((row) => row.value), [1, 2]);
 });
 
+test("CSV prefers a later ID column over a leading numeric score column", () => {
+  const ds = datasetFromCsv("score-and-id.csv", "score,subject_id\n1,001\n2,002\n");
+  assert.equal(ds.entityKey, "subject_id");
+  assert.deepEqual(ds.rows.map((row) => row.subject_id), ["001", "002"]);
+  assert.deepEqual(ds.rows.map((row) => row.score), [1, 2]);
+  assert.ok(ds.indicators.some((indicator) => indicator.key === "score"));
+});
+
+test("CSV excludes the time column when inferring a generic entity column", () => {
+  const ds = datasetFromCsv("panel-generic-ids.csv", "year,case,value\n2020,001,1\n2021,002,2\n");
+  assert.equal(ds.timeKey, "year");
+  assert.equal(ds.entityKey, "case");
+  assert.notEqual(ds.entityKey, ds.timeKey);
+  assert.deepEqual(ds.rows.map((row) => row.case), ["001", "002"]);
+  assert.deepEqual(ds.rows.map((row) => row.value), [1, 2]);
+  assert.ok(ds.indicators.some((indicator) => indicator.key === "value"));
+
+  const hinted = datasetFromCsv("panel-hinted-ids.csv", "year,id,value\n2020,001,1\n2021,002,2\n");
+  assert.equal(hinted.timeKey, "year");
+  assert.equal(hinted.entityKey, "id");
+  assert.deepEqual(hinted.rows.map((row) => row.id), ["001", "002"]);
+  assert.deepEqual(hinted.rows.map((row) => row.value), [1, 2]);
+});
+
 test("CSV rejects malformed widths and unclosed quotes with Chinese guidance", () => {
   assert.throws(() => datasetFromCsv("broken.csv", "id,value\n1,2,3\n"), /第 2 行有 3 列/);
   assert.throws(() => datasetFromCsv("broken.csv", 'id,value\n1,"2\n'), /引号未闭合/);

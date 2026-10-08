@@ -16,6 +16,7 @@ const ENTITY_HINTS = [
   "姓名",
   "name",
   "entity",
+  "case",
   "id",
   "省份",
 ];
@@ -75,6 +76,7 @@ function fieldMatches(header: string, hint: string): boolean {
   if (b === "城市" || b === "city") return a === "城市名称" || a === "city_name";
   if (b === "省份") return a === "province";
   if (b === "id") return a === "id";
+  if (b === "case") return a === "case" || a === "case_id" || a === "caseid";
   if (b === "village") return a === "village" || a === "village_id" || a.startsWith("village_");
   if (b === "county") return a === "county" || a === "county_id" || a.startsWith("county_");
   if (b === "region") return a === "region" || a === "region_id";
@@ -106,6 +108,28 @@ function pickHint(
     if (du) return du;
     return entityRank(b) - entityRank(a) || hits.indexOf(a) - hits.indexOf(b);
   })[0];
+}
+
+function isNumericEntityValue(value: unknown): boolean {
+  if (typeof value === "number") return true;
+  if (typeof value !== "string" || !value.trim()) return false;
+  const parsed = toNum(value.trim());
+  return parsed != null && !(Number.isInteger(parsed) && !Number.isSafeInteger(parsed));
+}
+
+function inferEntityKey(headers: string[], rows: DataRow[], timeKey?: string): string {
+  const candidates = headers.filter((h) => h !== timeKey);
+  if (!candidates.length) throw new Error("未能识别实体列：表格除时间列外没有可用字段。");
+  return (
+    pickHint(candidates, ENTITY_HINTS, rows, true) ??
+    candidates.find(looksLikeIdColumn) ??
+    candidates.find((h) => {
+      const values = rows.map((row) => row[h]);
+      const numericCount = values.filter(isNumericEntityValue).length;
+      return numericCount / Math.max(values.length, 1) < 0.6;
+    }) ??
+    candidates[0]!
+  );
 }
 
 function indicatorPriority(h: string, fill: number): number {
@@ -251,19 +275,7 @@ export function datasetFromParsed(
 ): Dataset {
 
   const timeKey = headers.find((h) => TIME_HINTS.some((k) => fieldMatches(h, k)));
-  const entityKey =
-    pickHint(
-      headers.filter((h) => h !== timeKey),
-      ENTITY_HINTS,
-      parsed,
-      true,
-    ) ??
-    headers.find((h) => {
-      const vals = parsed.map((r) => r[h]);
-      const nums = vals.filter((v) => typeof v === "number").length;
-      return nums / Math.max(vals.length, 1) < 0.6 && h !== timeKey;
-    }) ??
-    headers[0]!;
+  const entityKey = inferEntityKey(headers, parsed, timeKey);
   const groupKey = pickHint(
     headers.filter((h) => h !== entityKey && h !== timeKey),
     GROUP_HINTS,
@@ -387,21 +399,7 @@ export function datasetFromCsv(name: string, text: string): Dataset {
     return o;
   });
   const timeKey = headers.find((h) => TIME_HINTS.some((k) => fieldMatches(h, k)));
-  const entityHeaders = headers.filter((h) => h !== timeKey);
-  const entityKey =
-    pickHint(entityHeaders, ENTITY_HINTS, rawRows, true) ??
-    entityHeaders.find((h) => {
-      const numericCount = raw.reduce((count, r) => {
-        const value = (r[h] ?? "").trim();
-        if (!value) return count;
-        const n = toNum(value);
-        return n != null && !(Number.isInteger(n) && !Number.isSafeInteger(n))
-          ? count + 1
-          : count;
-      }, 0);
-      return numericCount / Math.max(raw.length, 1) < 0.6;
-    }) ??
-    headers[0]!;
+  const entityKey = inferEntityKey(headers, rawRows, timeKey);
   const parsed: DataRow[] = raw.map((r) => {
     const o: DataRow = {};
     for (const h of headers) {
