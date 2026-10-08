@@ -35,9 +35,14 @@ function gridToRows(headers: string[], body: unknown[][]): { headers: string[]; 
           o[hs[j]!] = v;
           continue;
         }
-        const s = String(v).trim();
+        const raw = String(v);
+        const s = raw.trim();
+        if (/(?:^id$|_id$|hid$|^pid$|^fid$|_code$|^code$|代码|编号|^city$|^城市$|^entity$|姓名|个体|企业)/i.test(hs[j]!)) {
+          o[hs[j]!] = raw;
+          continue;
+        }
         const n = toNum(s);
-        o[hs[j]!] = n != null ? n : s === "" ? null : s;
+        o[hs[j]!] = n != null && Number.isInteger(n) && !Number.isSafeInteger(n) ? raw : n != null ? n : raw;
       }
       return o;
     });
@@ -56,7 +61,12 @@ export function datasetFromDta(name: string, buffer: ArrayBuffer): Dataset {
 
 export async function datasetFromSpreadsheet(name: string, buffer: ArrayBuffer): Promise<Dataset> {
   const XLSX = await import("xlsx");
-  const wb = XLSX.read(buffer, { type: "array", raw: true, cellDates: false });
+  let wb: ReturnType<typeof XLSX.read>;
+  try {
+    wb = XLSX.read(buffer, { type: "array", raw: true, cellDates: false });
+  } catch (error) {
+    throw new Error(`无法解析 Excel 文件：${error instanceof Error ? error.message : "文件格式无效"}`);
+  }
   if (!wb.SheetNames.length) throw new Error("工作簿没有工作表。");
   let bestName = wb.SheetNames[0]!;
   let bestN = 0;

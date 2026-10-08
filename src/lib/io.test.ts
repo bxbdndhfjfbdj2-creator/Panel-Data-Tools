@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { parseDta } from "./dta.ts";
 import { datasetFromDta, datasetFromSpreadsheet } from "./io.ts";
+import { datasetFromCsv, datasetFromParsed } from "./csv.ts";
 import { computeScores, computeWeights, groupMeans, screenDataset } from "./engine.ts";
 import { applyTransform, quantile, samplingWeights, weightedMean, winsorize } from "./transform.ts";
 import { SAMPLE_DATASETS } from "./datasets.ts";
@@ -49,6 +50,104 @@ test("Stata reader parses the portable synthetic fixture", () => {
   assert.equal(table.labels.countyid, "Synthetic county code");
 });
 
+for (const release of [117, 118, 119]) {
+  test(`Stata ${release} data section uses map offsets when a value contains a closing tag`, () => {
+    const buf = readFileSync(new URL(`../../test-fixtures/synthetic/stata-tag-in-string-${release}.synthetic.dta`, import.meta.url));
+    const table = parseDta(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+    assert.equal(table.rows[0]?.note, "</data>");
+    assert.equal(table.rows[2]?.x, 3);
+  });
+}
+
+test("Stata strL text values are decoded instead of discarded", () => {
+  const buf = readFileSync(new URL("../../test-fixtures/synthetic/stata-strl.synthetic.dta", import.meta.url));
+  const table = parseDta(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+  assert.equal((table.rows[0]?.note as string).length, 2100);
+  assert.equal(table.rows[0]?.note, "a".repeat(2100));
+  assert.equal(table.rows[1]?.note, "b".repeat(2100));
+});
+
+test("Stata rejects missing strL references, truncated headers, and unterminated text", () => {
+  const fixture = readFileSync(new URL("../../test-fixtures/synthetic/stata-strl.synthetic.dta", import.meta.url));
+  const base = Uint8Array.from(fixture);
+  const dataStart = fixture.indexOf(Buffer.from("<data>")) + "<data>".length;
+
+  const badReference = Uint8Array.from(base);
+  badReference[dataStart + 6] = 99;
+  assert.throws(() => parseDta(badReference.buffer), /引用了不存在的 strL 记录/);
+
+  const badTerminator = Uint8Array.from(base);
+  const strlStart = fixture.indexOf(Buffer.from("<strls>")) + "<strls>".length;
+  const textLength = new DataView(badTerminator.buffer).getUint32(strlStart + 16, true);
+  badTerminator[strlStart + 20 + textLength - 1] = 120;
+  assert.throws(() => parseDta(badTerminator.buffer), /缺少结尾 NUL/);
+
+  const shortHeader = Uint8Array.from(base);
+  const mapData = fixture.indexOf(Buffer.from("<map>")) + "<map>".length;
+  const view = new DataView(shortHeader.buffer);
+  const strlsOffset = Number(view.getBigUint64(mapData + 10 * 8, true));
+  view.setBigUint64(mapData + 11 * 8, BigInt(strlsOffset + 31), true);
+  assert.throws(() => parseDta(shortHeader.buffer), /strL 区固定头部长度不足/);
+});
+
+test("Stata keeps large numeric measures numeric", () => {
+  const buf = readFileSync(new URL("../../test-fixtures/synthetic/stata-large-measure.synthetic.dta", import.meta.url));
+  const table = parseDta(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+  assert.equal(table.rows[0]?.large_measure, 9007199254740992);
+  assert.equal(typeof table.rows[0]?.large_measure, "number");
+});
+
+test("Stata value-label text containing closing tags survives map-based table parsing", () => {
+  const buf = readFileSync(new URL("../../test-fixtures/synthetic/stata-value-label-tags.synthetic.dta", import.meta.url));
+  const table = parseDta(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+  assert.equal(table.lblnames.q, "q");
+  assert.equal(table.valueLabels.q?.[1], "contains </lbl> and </value_labels>");
+  assert.equal(table.valueLabels.q?.[2], "ordinary");
+});
+
+test("Stata fixed-width text retains source leading and trailing spaces", () => {
+  const buf = readFileSync(new URL("../../test-fixtures/synthetic/stata-whitespace.synthetic.dta", import.meta.url));
+  const table = parseDta(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+  assert.equal(table.rows[0]?.note, "  leading and trailing  ");
+});
+
+test("Stata rejects legacy non-UTF-8 text instead of replacing bytes", () => {
+  const buf = readFileSync(new URL("../../test-fixtures/synthetic/stata-latin1-117.synthetic.dta", import.meta.url));
+  assert.throws(() => parseDta(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)), /不是有效 UTF-8.*重导出为 Unicode 118\/119/);
+});
+
+test("CSV and TSV preserve identifiers, source codes, duplicate columns, and sparse candidates", () => {
+  const csv = datasetFromCsv("ids.csv", 'record_id,,score,score,code,note,sparse\n00017,alpha,97,,9007199254740993,"  words ;; and || marks  ",\n00018,beta,99,2,9007199254740994,other note,5\n');
+  assert.deepEqual(Object.keys(csv.rows[0] ?? {}), ["record_id", "列2", "score", "score_2", "code", "note", "sparse"]);
+  assert.equal(csv.rows[0]?.record_id, "00017");
+  assert.equal(csv.rows[0]?.score, 97);
+  assert.equal(csv.rows[1]?.score, 99);
+  assert.equal(csv.rows[0]?.code, "9007199254740993");
+  assert.equal(csv.rows[1]?.code, "9007199254740994");
+  assert.equal(csv.rows[0]?.note, "  words ;; and || marks  ");
+  assert.equal(csv.rows[0]?.sparse, null);
+  assert.equal(csv.rows[1]?.sparse, 5);
+  assert.ok(csv.catalog?.some((item) => item.key === "sparse"));
+  const tsv = datasetFromCsv("ids.tsv", "subject_id\tmeasure\n00123\t-4\n00124\t5\n");
+  assert.equal(tsv.rows[0]?.subject_id, "00123");
+  assert.equal(tsv.rows[0]?.measure, -4);
+});
+
+test("CSV rejects malformed widths and unclosed quotes with Chinese guidance", () => {
+  assert.throws(() => datasetFromCsv("broken.csv", "id,value\n1,2,3\n"), /第 2 行有 3 列/);
+  assert.throws(() => datasetFromCsv("broken.csv", 'id,value\n1,"2\n'), /引号未闭合/);
+});
+
+test("Stata value labels remain metadata and do not replace numeric values", () => {
+  const ds = datasetFromParsed("labels", ["id", "answer"], [{ id: "a", answer: 97 }, { id: "b", answer: 99 }], {
+    lblnames: { answer: "answers" },
+    valueLabelSets: { answers: { 97: "不适用", 99: "拒答" } },
+  });
+  assert.equal(ds.rows[0]?.answer, 97);
+  assert.equal(ds.rows[1]?.answer, 99);
+  assert.equal(ds.valueLabels?.answer?.["97"], "不适用");
+});
+
 test("synthetic dta import becomes a dataset", () => {
   const buf = readFileSync(
     new URL("../../test-fixtures/synthetic/stata-import.synthetic.dta", import.meta.url),
@@ -71,10 +170,27 @@ test("synthetic Excel import reads a codebook workbook", async () => {
     buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
   );
   assert.equal(ds.rows.length, 3);
-  assert.deepEqual(Object.keys(ds.rows[0] ?? {}), ["indicator", "value"]);
+  assert.deepEqual(Object.keys(ds.rows[0] ?? {}), ["indicator", "label", "value"]);
   assert.equal(ds.rows[1]?.indicator, "income");
+  assert.equal(ds.rows[1]?.label, "Income score");
   assert.equal(ds.rows[1]?.value, 2);
   assert.ok(ds.indicators.length + Object.keys(ds.rows[0] ?? {}).length > 0);
+});
+
+test("Excel text identifiers retain leading zeroes and unsafe integer digits", async () => {
+  const XLSX = await import("xlsx");
+  const wb = XLSX.utils.book_new();
+  const sheet = XLSX.utils.aoa_to_sheet([
+    ["record_id", "measure"],
+    ["000123", 1],
+    ["9007199254740993", 2],
+  ]);
+  XLSX.utils.book_append_sheet(wb, sheet, "IDs");
+  const bytes = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+  const ds = await datasetFromSpreadsheet("ids.xlsx", bytes);
+  assert.equal(ds.rows[0]?.record_id, "000123");
+  assert.equal(ds.rows[1]?.record_id, "9007199254740993");
+  assert.equal(ds.rows[1]?.measure, 2);
 });
 
 test("engine scores include weight 1 by default", () => {

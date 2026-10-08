@@ -36,12 +36,9 @@ const GROUP_HINTS = [
 ];
 const MAX_INDICATORS = 60;
 const AUTO_SELECT = 12;
-const SURVEY_MISS = new Set([-1, -2, -3, -4, -5, -7, -8, -9, -10, 97, 98, 99, 996, 997, 998, 999]);
-const SURVEY_NEG_MISS = new Set([-1, -2, -3, -4, -5, -7, -8, -9, -10]);
-
 function looksLikeIdColumn(h: string): boolean {
   const s = h.toLowerCase();
-  return /(?:^id$|_id$|hid$|^pid$|^fid$|_code$|^code$|代码)/.test(s);
+  return /(?:^id$|_id$|hid$|^pid$|^fid$|_code$|^code$|代码|编号|^city$|^城市$|^entity$|姓名|个体|企业)/.test(s);
 }
 
 function looksLikeMetaColumn(h: string): boolean {
@@ -128,27 +125,56 @@ function fillRate(rows: DataRow[], key: string): number {
   return n / rows.length;
 }
 
-function recodeSurveyMissing(rows: DataRow[], keys: string[]) {
-  for (const key of keys) {
-    let n = 0;
-    let likert = 0;
-    for (const r of rows) {
-      const v = r[key];
-      if (typeof v !== "number") continue;
-      n += 1;
-      if (v >= 1 && v <= 7) likert += 1;
+function detectDelimiter(src: string): string {
+  // Comma and tab are the supported interchange delimiters. Restricting the
+  // candidates avoids treating punctuation inside ordinary text as a delimiter.
+  const candidates = [",", "\t"];
+  const scores = new Map<string, { width: number; consistency: number; total: number }>();
+  for (const delimiter of candidates) {
+    const counts: number[] = [];
+    let quoted = false;
+    let fields = 1;
+    for (let i = 0; i < src.length && counts.length < 12; i++) {
+      const ch = src[i]!;
+      if (ch === '"') {
+        if (quoted && src[i + 1] === '"') i++;
+        else quoted = !quoted;
+      } else if (!quoted && ch === delimiter) fields++;
+      else if (!quoted && ch === "\n") {
+        if (fields > 1) counts.push(fields);
+        fields = 1;
+      }
     }
-    for (const r of rows) {
-      const v = r[key];
-      if (typeof v !== "number") continue;
-      if (SURVEY_NEG_MISS.has(v)) r[key] = null;
-      else if (likert / Math.max(n, 1) >= 0.5 && SURVEY_MISS.has(v)) r[key] = null;
-    }
+    if (fields > 1 && counts.length < 12) counts.push(fields);
+    const width = counts.length ? Math.max(...counts) : 1;
+    const consistency = counts.filter((n) => n === width).length;
+    scores.set(delimiter, { width, consistency, total: counts.length });
   }
+  return [...candidates].sort((a, b) => {
+    const x = scores.get(a)!;
+    const y = scores.get(b)!;
+    return y.consistency / Math.max(1, y.total) - x.consistency / Math.max(1, x.total) ||
+      y.width - x.width || (a === "," ? -1 : 1);
+  })[0]!;
+}
+
+function uniqueHeaders(raw: string[]): string[] {
+  const used = new Set<string>();
+  return raw.map((h, i) => {
+    let name = h.trim() || `列${i + 1}`;
+    if (used.has(name)) {
+      let k = 2;
+      while (used.has(`${name}_${k}`)) k++;
+      name = `${name}_${k}`;
+    }
+    used.add(name);
+    return name;
+  });
 }
 
 function parseCsv(text: string): { headers: string[]; rows: Record<string, string>[] } {
   const src = text.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const delimiter = detectDelimiter(src);
   const table: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -176,7 +202,7 @@ function parseCsv(text: string): { headers: string[]; rows: Record<string, strin
       i++;
       continue;
     }
-    if (ch === ",") {
+    if (ch === delimiter) {
       row.push(cell);
       cell = "";
       i++;
@@ -193,20 +219,20 @@ function parseCsv(text: string): { headers: string[]; rows: Record<string, strin
     cell += ch;
     i++;
   }
+  if (inQ) throw new Error("CSV 引号未闭合，请检查字段中的双引号。");
   if (cell.length || row.length) {
     row.push(cell);
     table.push(row);
   }
   if (!table.length) return { headers: [], rows: [] };
-  const headers = table[0]!.map((h) => h.trim());
+  const headers = uniqueHeaders(table[0]!);
   const rows: Record<string, string>[] = [];
   for (let r = 1; r < table.length; r++) {
     const line = table[r]!;
     if (line.every((x) => x.trim() === "")) continue;
+    if (line.length !== headers.length) throw new Error(`CSV 第 ${r + 1} 行有 ${line.length} 列，表头有 ${headers.length} 列；请检查缺失字段、分隔符或字段中的引号。`);
     const o: Record<string, string> = {};
-    headers.forEach((h, j) => {
-      o[h] = line[j] ?? "";
-    });
+    headers.forEach((h, j) => { o[h] = line[j] ?? ""; });
     rows.push(o);
   }
   return { headers, rows };
@@ -249,27 +275,11 @@ export function datasetFromParsed(
   );
 
   const kind: DatasetKind = timeKey ? "panel" : "survey";
-  recodeSurveyMissing(
-    parsed,
-    headers.filter((h) => h !== entityKey && h !== timeKey && h !== groupKey && h !== weightKey),
-  );
-
-  const skipIds = new Set(
-    [entityKey, timeKey, groupKey, weightKey].filter((x): x is string => !!x),
-  );
-  const valueLabels = attachValueLabels(
-    parsed,
-    headers,
-    opts?.lblnames ?? {},
-    opts?.valueLabelSets ?? {},
-    skipIds,
-    timeKey,
-  );
+  const valueLabels = attachValueLabels(headers, opts?.lblnames ?? {}, opts?.valueLabelSets ?? {});
 
   const numeric = headers.filter((h) => {
-    const vals = parsed.map((r) => r[h]);
-    const nums = vals.filter((v) => typeof v === "number").length;
-    return nums / Math.max(vals.length, 1) >= 0.6;
+    const present = parsed.map((r) => r[h]).filter((v) => v != null && v !== "");
+    return present.length > 0 && present.every((v) => typeof v === "number");
   });
 
   const dimId = "d1";
@@ -299,10 +309,9 @@ export function datasetFromParsed(
     weight: autoN ? 1 / autoN : 1,
   }));
 
-  const keep = new Set<string>([entityKey, ...indicatorKeys]);
-  if (timeKey) keep.add(timeKey);
-  if (groupKey) keep.add(groupKey);
-  if (weightKey) keep.add(weightKey);
+  // Keep every source field in each imported row; catalog selection only controls
+  // which numeric fields are initially treated as indicators.
+  const keep = new Set<string>(headers);
   const rows: DataRow[] = parsed.map((r) => {
     const o: DataRow = {};
     for (const k of keep) o[k] = r[k] ?? null;
@@ -349,12 +358,9 @@ export function datasetFromParsed(
 }
 
 function attachValueLabels(
-  rows: DataRow[],
   headers: string[],
   lblnames: Record<string, string>,
   sets: Record<string, Record<number, string>>,
-  skip: Set<string>,
-  timeKey?: string,
 ): Record<string, Record<string, string>> {
   const attached: Record<string, Record<string, string>> = {};
   if (!Object.keys(sets).length) return attached;
@@ -365,26 +371,7 @@ function attachValueLabels(
     const asStr: Record<string, string> = {};
     for (const [k, v] of Object.entries(map)) asStr[String(k)] = v;
     attached[h] = asStr;
-    if (h === timeKey) continue;
-    let n = 0;
-    let likert = 0;
-    const uniq = new Set<number>();
-    for (const r of rows) {
-      const v = r[h];
-      if (typeof v !== "number") continue;
-      n += 1;
-      uniq.add(v);
-      if (Number.isInteger(v) && v >= 1 && v <= 7) likert += 1;
-    }
-    const isLikert = n > 0 && likert / n >= 0.7 && uniq.size <= 8;
-    const recode = skip.has(h) || (uniq.size > 1 && uniq.size <= 60 && !isLikert);
-    if (!recode) continue;
-    for (const r of rows) {
-      const v = r[h];
-      if (typeof v !== "number") continue;
-      const lab = map[v];
-      if (lab) r[h] = lab;
-    }
+    // Labels are metadata; source numeric codes remain unchanged.
   }
   return attached;
 }
@@ -395,9 +382,17 @@ export function datasetFromCsv(name: string, text: string): Dataset {
   const parsed: DataRow[] = raw.map((r) => {
     const o: DataRow = {};
     for (const h of headers) {
-      const v = r[h] ?? "";
+      const rawValue = r[h] ?? "";
+      const v = rawValue.trim();
+      if (v === "") { o[h] = null; continue; }
+      // Text identifiers retain leading zeroes and digits beyond JS's exact integer range.
+      if (looksLikeIdColumn(h) || ENTITY_HINTS.some((hint) => fieldMatches(h, hint))) {
+        o[h] = rawValue;
+        continue;
+      }
       const n = toNum(v);
-      o[h] = n != null ? n : v === "" ? null : v;
+      if (n != null && Number.isInteger(n) && !Number.isSafeInteger(n)) o[h] = rawValue;
+      else o[h] = n != null ? n : rawValue;
     }
     return o;
   });
