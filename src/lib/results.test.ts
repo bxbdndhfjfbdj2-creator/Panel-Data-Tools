@@ -4,7 +4,7 @@ import type { Dataset } from "./types.ts";
 import { computeScores, computeWeights, crossMethodAnalysis, leaveOneOutInfluence, selectResultRows } from "./engine.ts";
 import { bootstrapIntervals, yearStability } from "./diagnose.ts";
 import { actualLatestYear, buildAnalysisContext, describeActualYears, numericYears, resultPeriodLabel, resultViewDescription } from "./slice.ts";
-import { allocateExportFilename, buildMarkdownReport, claimSessionExportFilename, markdownText } from "./report.ts";
+import { allocateExportFilename, buildMarkdownReport, claimSessionExportFilename, markdownText, stableDataHash } from "./report.ts";
 import { DEFAULT_THRESHOLDS } from "./types.ts";
 
 function panelFixture(): Dataset {
@@ -111,7 +111,8 @@ test("report captures actual run context, escapes table text, and separates full
   const current = {
     ...source,
     rows: source.rows.filter((row) => row.year === 2021),
-    indicators: source.indicators.map((ind) => ind.key === "x1" ? { ...ind, direction: -1 as const, logMode: "log1p" as const } : ind),
+    dimensions: source.dimensions.map((dim) => ({ ...dim, weight: 4 })),
+    indicators: source.indicators.map((ind) => ind.key === "x1" ? { ...ind, direction: -1 as const, weight: 0.8, logMode: "log1p" as const } : ind.key === "x2" ? { ...ind, weight: 0.2 } : ind),
   };
   current.weightKey = "weight|_key";
   const weights = computeWeights(current, "equal");
@@ -127,7 +128,16 @@ test("report captures actual run context, escapes table text, and separates full
   assert.match(report, /全量观测：18 行/);
   assert.match(report, /观测：6 行/);
   assert.match(report, /method=equal; standardize=minmax; missing=listwise; transform=winsor=0\.05, logMode=ln/);
-  assert.match(report, /运行 ID \/ 数据哈希：[0-9a-f]{16}/);
+  const runId = report.match(/运行 ID：([0-9a-f]{16})/)?.[1];
+  assert.ok(runId);
+  const payloadJson = report.match(/```json\n([\s\S]*?)\n```/)?.[1];
+  assert.ok(payloadJson);
+  const hashPayload = JSON.parse(payloadJson) as { selected: { key: string; direction: number; logMode: string; weight: number; dimensionId: string }[]; dimensions: { id: string; name: string; weight: number }[] };
+  assert.equal(stableDataHash(hashPayload), runId);
+  assert.deepEqual(hashPayload.selected.find((i) => i.key === "x1"), { key: "x1", direction: -1, logMode: "log1p", weight: 0.8, dimensionId: "d1" });
+  assert.deepEqual(hashPayload.dimensions.find((d) => d.id === "d1"), { id: "d1", name: "D|one", weight: 4 });
+  assert.match(payloadJson, /"maxMissing": 0\.2/);
+  assert.match(payloadJson, /"minCv": 0\.03/);
   assert.match(report, /指定年份 2021/);
   assert.match(report, /当前数据实际年份：2021–2021（连续，共 1 年）/);
   assert.ok(report.includes("抽样权重列：weight\\|\\_key"));
@@ -137,7 +147,8 @@ test("report captures actual run context, escapes table text, and separates full
   assert.match(report, /A\\\|one/);
   assert.match(report, /有效 B=29/);
   assert.match(report, /不是完整置信区间/);
-  assert.match(report, /指标实际权重：x1=/);
+  assert.match(report, /维度权重（dimension id \/ name \/ 配置 weight → 实际计算权重）：d1 \/ D\\\|one：4\.000000 → 1\.000000/);
+  assert.match(report, /指标权重（key \/ dimensionId \/ 配置 weight → 维内实际权重 → 全局实际权重）：x1 \/ d1：0\.800000 → 0\.333333 → 0\.333333/);
   assert.match(report, /筛选阈值：最大缺失率 20\.0%/);
   assert.match(report, /x1：负向；logMode=指标覆盖（log1p）/);
   assert.match(report, /x2：正向；logMode=继承全局（ln）/);
@@ -185,15 +196,35 @@ test("report hash changes when direction, indicator log override, or screening t
       transform: { winsor: 0, logMode: "off" }, yearFrom: null, yearTo: null,
       thresholds, screen: [], weights, ranking, kmo: null, dropped: 0, alpha: null,
     });
-    return report.match(/运行 ID \/ 数据哈希：([0-9a-f]{16})/)?.[1];
+    return report.match(/运行 ID：([0-9a-f]{16})/)?.[1];
   };
   const base = reportHash(ds);
   assert.ok(base);
   const reversed = { ...ds, indicators: ds.indicators.map((ind) => ind.key === "x1" ? { ...ind, direction: -1 as const } : ind) };
   const transformed = { ...ds, indicators: ds.indicators.map((ind) => ind.key === "x1" ? { ...ind, logMode: "ln" as const } : ind) };
+  const reweighted = { ...ds, indicators: ds.indicators.map((ind) => ind.key === "x1" ? { ...ind, weight: 0.8000001 } : ind) };
+  const dimensioned = {
+    ...ds,
+    dimensions: [...ds.dimensions, { id: "d2", name: "D2", weight: 0.4 }],
+    indicators: ds.indicators.map((ind) => ind.key === "x1" ? { ...ind, dimensionId: "d2" } : ind),
+  };
   assert.notEqual(reportHash(reversed), base);
   assert.notEqual(reportHash(transformed), base);
+  assert.notEqual(reportHash(reweighted), base);
+  assert.notEqual(reportHash(dimensioned), base);
   assert.notEqual(reportHash(ds, { ...DEFAULT_THRESHOLDS, maxAbsCorr: 0.42 }), base);
+
+  const preciseThresholdReport = (() => {
+    const weights = computeWeights(ds, "equal");
+    return buildMarkdownReport({
+      dataset: ds, method: "equal", standardize: "minmax", missingMode: "listwise",
+      transform: { winsor: 0, logMode: "off" }, yearFrom: null, yearTo: null,
+      thresholds: { ...DEFAULT_THRESHOLDS, maxMissing: 0.1234567 }, screen: [], weights,
+      ranking: computeScores(ds, weights, "minmax", "equal").rows, kmo: null, dropped: 0, alpha: null,
+    });
+  })();
+  assert.match(preciseThresholdReport, /"maxMissing": 0\.1234567/);
+  assert.match(preciseThresholdReport, /"weight": 0\.5[\s\S]*"dimensionId": "d1"/);
 });
 
 test("export filenames are safe and deterministically de-duplicated", () => {

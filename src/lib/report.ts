@@ -127,18 +127,40 @@ export function buildMarkdownReport(opts: {
   const selected = ds.indicators.filter((i) => i.selected && i.dimensionId);
   const entities = new Set(ds.rows.map((r) => String(r[ds.entityKey])));
   const years = numericYears(ds);
-  const runId = stableDataHash({
-    datasetId: ds.id, rows: ds.rows, method, standardize, missingMode, transform,
-    yearFrom, yearTo, view, thresholds,
-    selected: selected.map((i) => ({ key: i.key, direction: i.direction, logMode: i.logMode ?? "inherit", weight: i.weight, dimensionId: i.dimensionId })),
+  const dataHash = stableDataHash({ datasetId: ds.id, rows: ds.rows });
+  const selectedHashConfig = selected.map((i) => ({
+    key: i.key,
+    direction: i.direction,
+    logMode: i.logMode ?? "inherit",
+    weight: i.weight,
+    dimensionId: i.dimensionId,
+  }));
+  const dimensionsHashConfig = ds.dimensions.map((d) => ({ id: d.id, name: d.name, weight: d.weight }));
+  const hashPayload = {
+    dataHash,
+    method,
+    standardize,
+    missingMode,
+    transform: transform ?? { winsor: 0, logMode: "off" },
+    yearFrom,
+    yearTo,
+    view,
+    thresholds,
+    selected: selectedHashConfig,
+    dimensions: dimensionsHashConfig,
     weights,
-  });
+  };
+  const runId = stableDataHash(hashPayload);
   const lines: string[] = [];
 
   lines.push(`# ${markdownText(ds.goalName)}`);
   lines.push("");
   lines.push(`生成时间：${new Date().toLocaleString("zh-CN")}`);
-  lines.push(`- 运行版本：衡策结果报告 v1；运行 ID / 数据哈希：${runId}`);
+  lines.push(`- 运行版本：衡策结果报告 v2；运行 ID：${runId}；数据哈希：${dataHash}`);
+  lines.push("- 运行哈希算法：衡策双 32 位 FNV-1a 配置哈希；下面的 JSON 是运行 ID 的完整输入（dataHash 由数据集 ID 与当前窗口数据行生成），数值为可复算的原始精度配置。");
+  lines.push("```json");
+  lines.push(JSON.stringify(hashPayload, null, 2));
+  lines.push("```");
   lines.push("");
   lines.push("## 一、数据");
   lines.push(`- 名称：${markdownText(ds.name)}`);
@@ -194,8 +216,8 @@ export function buildMarkdownReport(opts: {
   }
   lines.push(`- 参数：method=${method}; standardize=${standardize}; missing=${missingMode}; transform=${transform ? `winsor=${transform.winsor}, logMode=${transform.logMode}` : "winsor=0, logMode=off"}`);
   lines.push(`- 实际纳入指标 keys：${selected.map((i) => `\`${markdownText(i.key)}\``).join(", ") || "无"}`);
-  lines.push(`- 维度权重：${ds.dimensions.map((d) => `${markdownText(d.name)}=${fmt(weights.dimension[d.id] ?? 0, 6)}`).join("；") || "无"}`);
-  lines.push(`- 指标实际权重：${selected.map((i) => `${markdownText(i.key)}=${fmt(weights.indicator[i.key] ?? 0, 6)}`).join("；") || "无"}`);
+  lines.push(`- 维度权重（dimension id / name / 配置 weight → 实际计算权重）：${ds.dimensions.map((d) => `${markdownText(d.id)} / ${markdownText(d.name)}：${fmt(d.weight, 6)} → ${fmt(weights.dimension[d.id] ?? 0, 6)}`).join("；") || "无"}`);
+  lines.push(`- 指标权重（key / dimensionId / 配置 weight → 维内实际权重 → 全局实际权重）：${selected.map((i) => `${markdownText(i.key)} / ${markdownText(i.dimensionId)}：${fmt(i.weight, 6)} → ${fmt(weights.indicator[i.key] ?? 0, 6)} → ${fmt((weights.indicator[i.key] ?? 0) * (weights.dimension[i.dimensionId!] ?? 0), 6)}`).join("；") || "无"}`);
   lines.push(`- 筛选阈值：最大缺失率 ${fmtPct(thresholds.maxMissing)}；最低 CV ${fmt(thresholds.minCv, 4)}；最大 |相关系数| ${fmt(thresholds.maxAbsCorr, 4)}；最大 VIF ${fmt(thresholds.maxVif, 4)}；最低题总相关 ${fmt(thresholds.minItemTotal, 4)}；最大地板/天花板比例 ${fmtPct(thresholds.maxFloorCeiling)}`);
   lines.push("- 纳入指标方向与对数变换：");
   for (const ind of selected) {
