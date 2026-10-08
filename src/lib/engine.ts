@@ -310,7 +310,9 @@ function recodeForDirection(col: (number | null)[], direction: 1 | -1): (number 
 function likertBounds(xs: number[]): { lo: number; hi: number } | null {
   if (!xs.length) return null;
   if (!xs.every((x) => Number.isInteger(x) && x >= 1 && x <= 7)) return null;
-  return { lo: 1, hi: Math.max(...xs) <= 5 ? 5 : 7 };
+  let max = -Infinity;
+  for (const value of xs) max = Math.max(max, value);
+  return { lo: 1, hi: max <= 5 ? 5 : 7 };
 }
 
 function completeCases(cols: (number | null)[][]): { cols: number[][]; keep: number[] } | null {

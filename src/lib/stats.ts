@@ -194,52 +194,78 @@ export function invertMatrix(A: number[][]): number[][] | null {
   return m.map((row) => row.slice(n));
 }
 
-export function eigenSym(A: number[][], maxIter = 80): { values: number[]; vectors: number[][] } {
+export function eigenSym(A: number[][], maxIter?: number): { values: number[]; vectors: number[][] } {
   const n = A.length;
-  const a = A.map((row) => row.slice());
+  if (!n) return { values: [], vectors: [] };
+  if (A.some((row) => row.length !== n)) throw new Error("eigenSym expects a square matrix");
+  let scale = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const x = A[i]![j]!;
+      if (!Number.isFinite(x)) throw new Error("eigenSym expects finite matrix entries");
+      scale = Math.max(scale, Math.abs(x));
+    }
+  }
+  const symmetryTolerance = 1e-10 * Math.max(1, scale);
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (Math.abs(A[i]![j]! - A[j]![i]!) > symmetryTolerance) {
+        throw new Error("eigenSym expects a symmetric matrix");
+      }
+    }
+  }
+  if (maxIter != null && (!Number.isInteger(maxIter) || maxIter < 1)) {
+    throw new Error("eigenSym maxIter must be a positive integer");
+  }
+  const a = A.map((row, i) => row.map((x, j) => (x + A[j]![i]!) / 2));
   const v: number[][] = Array.from({ length: n }, (_, i) =>
     Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)),
   );
-  for (let iter = 0; iter < maxIter; iter++) {
-    let p = 0;
-    let q = 1;
-    let max = 0;
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const val = Math.abs(a[i]![j]!);
-        if (val > max) {
-          max = val;
-          p = i;
-          q = j;
+  const tolerance = 1e-13 * Math.max(1, scale);
+  const sweeps = maxIter ?? Math.max(12, 5 * n);
+  let converged = n < 2;
+  for (let sweep = 0; sweep < sweeps && !converged; sweep++) {
+    let offDiagonal = 0;
+    for (let p = 0; p < n; p++) {
+      for (let q = p + 1; q < n; q++) offDiagonal = Math.hypot(offDiagonal, Math.SQRT2 * a[p]![q]!);
+    }
+    if (offDiagonal <= tolerance) {
+      converged = true;
+      break;
+    }
+    for (let p = 0; p < n - 1; p++) {
+      for (let q = p + 1; q < n; q++) {
+        const apq = a[p]![q]!;
+        if (Math.abs(apq) <= tolerance / Math.max(1, n)) continue;
+        const app = a[p]![p]!;
+        const aqq = a[q]![q]!;
+        const tau = (aqq - app) / (2 * apq);
+        const t = (tau >= 0 ? 1 : -1) / (Math.abs(tau) + Math.hypot(1, tau));
+        const c = 1 / Math.sqrt(1 + t * t);
+        const s = t * c;
+        for (let k = 0; k < n; k++) {
+          if (k === p || k === q) continue;
+          const aik = a[k]![p]!;
+          const aiq = a[k]![q]!;
+          a[k]![p] = a[p]![k] = c * aik - s * aiq;
+          a[k]![q] = a[q]![k] = s * aik + c * aiq;
+        }
+        a[p]![p] = app - t * apq;
+        a[q]![q] = aqq + t * apq;
+        a[p]![q] = a[q]![p] = 0;
+        for (let k = 0; k < n; k++) {
+          const vip = v[k]![p]!;
+          const viq = v[k]![q]!;
+          v[k]![p] = c * vip - s * viq;
+          v[k]![q] = s * vip + c * viq;
         }
       }
     }
-    if (max < 1e-12) break;
-    const app = a[p]![p]!;
-    const aqq = a[q]![q]!;
-    const apq = a[p]![q]!;
-    const tau = (aqq - app) / (2 * apq);
-    const sign = tau >= 0 ? 1 : -1;
-    const t = sign / (Math.abs(tau) + Math.sqrt(1 + tau * tau));
-    const c = 1 / Math.sqrt(1 + t * t);
-    const s = t * c;
-    for (let k = 0; k < n; k++) {
-      if (k === p || k === q) continue;
-      const aik = a[k]![p]!;
-      const aiq = a[k]![q]!;
-      a[k]![p] = a[p]![k] = c * aik - s * aiq;
-      a[k]![q] = a[q]![k] = s * aik + c * aiq;
-    }
-    a[p]![p] = c * c * app - 2 * s * c * apq + s * s * aqq;
-    a[q]![q] = s * s * app + 2 * s * c * apq + c * c * aqq;
-    a[p]![q] = a[q]![p] = 0;
-    for (let k = 0; k < n; k++) {
-      const vip = v[k]![p]!;
-      const viq = v[k]![q]!;
-      v[k]![p] = c * vip - s * viq;
-      v[k]![q] = s * vip + c * viq;
-    }
   }
+  let remaining = 0;
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) remaining = Math.hypot(remaining, Math.SQRT2 * a[i]![j]!);
+  converged ||= remaining <= tolerance;
+  if (!converged) throw new Error(`eigenSym did not converge after ${sweeps} Jacobi sweeps (off-diagonal residual ${remaining})`);
   const pairs = Array.from({ length: n }, (_, i) => ({
     value: a[i]![i]!,
     vector: v.map((row) => row[i]!),
@@ -470,8 +496,14 @@ export function topsisCloseness(weighted: number[][]): number[] {
   const n = weighted.length;
   const p = weighted[0]?.length ?? 0;
   if (!n || !p) return [];
-  const ideal = Array.from({ length: p }, (_, j) => Math.max(...weighted.map((r) => r[j]!)));
-  const nadir = Array.from({ length: p }, (_, j) => Math.min(...weighted.map((r) => r[j]!)));
+  const ideal = Array<number>(p).fill(-Infinity);
+  const nadir = Array<number>(p).fill(Infinity);
+  for (const row of weighted) {
+    for (let j = 0; j < p; j++) {
+      ideal[j] = Math.max(ideal[j]!, row[j]!);
+      nadir[j] = Math.min(nadir[j]!, row[j]!);
+    }
+  }
   return weighted.map((row) => {
     let dp = 0;
     let dm = 0;

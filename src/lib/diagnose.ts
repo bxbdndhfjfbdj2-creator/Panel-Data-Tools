@@ -67,7 +67,9 @@ export function scaleHints(ds: Dataset, tx: TransformSpec = DEFAULT_TRANSFORM): 
       note = "与其余纳入指标负相关，建议取反。";
     }
     const raw = finite(colValues(ds.rows, ind.key));
-    const min = raw.length ? Math.min(...raw) : NaN;
+    let min = Infinity;
+    for (const value of raw) min = Math.min(min, value);
+    if (!raw.length) min = NaN;
     const suggestLog = !likert && raw.length > 8 && min >= 0 && Number.isFinite(skew) && skew > 1.2;
     if (suggestLog) note = note ? `${note} 右偏，聚合步建议 ln(1+x)。` : "右偏，聚合步建议 ln(1+x)。";
     if (!note) note = likert ? "李克特题，勿取对数。" : "方向与量纲可接受。";

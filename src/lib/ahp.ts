@@ -9,6 +9,16 @@ export function saatyFromStep(step: number): number {
   return 1 / (1 - s);
 }
 
+/** UI slider convention: its left endpoint favors the left criterion. */
+export function ahpSliderStepToSaaty(sliderStep: number): number {
+  return saatyFromStep(-sliderStep);
+}
+
+export function ahpSaatyToSliderStep(value: number): number {
+  const step = -stepFromSaaty(value);
+  return Object.is(step, -0) ? 0 : step;
+}
+
 export function stepFromSaaty(value: number): number {
   if (!Number.isFinite(value) || value <= 0) return 0;
   if (value >= 1) return Math.max(0, Math.min(8, Math.round(value) - 1));
@@ -48,11 +58,21 @@ export interface AhpResult {
 export function solveAhp(matrix: number[][]): AhpResult {
   const n = matrix.length;
   if (n === 0) return { weights: [], lambda: NaN, ci: NaN, cr: NaN, n: 0 };
+  if (matrix.some((row) => row.length !== n)) throw new Error("AHP requires a square comparison matrix");
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const value = matrix[i]![j]!;
+      if (!Number.isFinite(value) || value <= 0) throw new Error("AHP comparison values must be finite and positive");
+      if (i === j && Math.abs(value - 1) > 1e-10) throw new Error("AHP comparison matrix diagonal values must be 1");
+      if (Math.abs(value * matrix[j]![i]! - 1) > 1e-8) {
+        throw new Error("AHP comparison matrix must be reciprocal");
+      }
+    }
+  }
   if (n === 1) return { weights: [1], lambda: 1, ci: 0, cr: 0, n: 1 };
 
   const raw = matrix.map((row) => {
-    const prod = row.reduce((a, b) => a * (b > 0 ? b : 1), 1);
-    return Math.pow(prod, 1 / n);
+    return Math.exp(row.reduce((sum, value) => sum + Math.log(value), 0) / n);
   });
   const sum = raw.reduce((a, b) => a + b, 0) || 1;
   const weights = raw.map((x) => x / sum);

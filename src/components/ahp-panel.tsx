@@ -2,12 +2,12 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   consistencyLabel,
+  ahpSaatyToSliderStep,
+  ahpSliderStepToSaaty,
   formatSaaty,
   identityMatrix,
-  saatyFromStep,
   setPair,
   solveAhp,
-  stepFromSaaty,
 } from "@/lib/ahp";
 import { useStudio } from "@/lib/store";
 import { cn, fmt, fmtPct } from "@/lib/utils";
@@ -74,7 +74,7 @@ function AhpForm({ onApplied }: { onApplied: () => void }) {
           const left = dims[i]!;
           const right = dims[j]!;
           const v = matrix[i]![j]!;
-          const step = stepFromSaaty(v);
+          const step = ahpSaatyToSliderStep(v);
           return (
             <li key={`${left.id}-${right.id}`} className="rounded-lg bg-bg p-3">
               <div className="flex items-center justify-between gap-2 text-xs">
@@ -90,7 +90,7 @@ function AhpForm({ onApplied }: { onApplied: () => void }) {
                 value={[step]}
                 onValueChange={(x) => {
                   const s = x[0] ?? 0;
-                  setMatrix((m) => setPair(m, i, j, saatyFromStep(s)));
+                  setMatrix((m) => setPair(m, i, j, ahpSliderStepToSaaty(s)));
                 }}
               />
               <div className="mt-1 flex justify-between text-2xs text-subtle">

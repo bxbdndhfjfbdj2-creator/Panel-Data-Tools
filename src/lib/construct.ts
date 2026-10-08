@@ -154,6 +154,36 @@ export function pruneCollinear(
   const keep = idxs.slice();
   const drop: number[] = [];
 
+  const weakestPivot = (ids: number[]): number => {
+    const n = ids.length;
+    const residual = ids.map((i) => R[i]![i]!);
+    const factor = Array.from({ length: n }, () => Array<number>(n).fill(0));
+    const used = Array<boolean>(n).fill(false);
+    for (let rank = 0; rank < n; rank++) {
+      let pivot = -1;
+      for (let i = 0; i < n; i++) {
+        if (!used[i] && (pivot < 0 || residual[i]! > residual[pivot]!)) pivot = i;
+      }
+      if (pivot < 0 || residual[pivot]! <= 1e-10) {
+        let weakest = -1;
+        for (let i = 0; i < n; i++) {
+          if (!used[i] && (weakest < 0 || residual[i]! < residual[weakest]!)) weakest = i;
+        }
+        return weakest < 0 ? 0 : weakest;
+      }
+      used[pivot] = true;
+      const root = Math.sqrt(residual[pivot]!);
+      for (let i = 0; i < n; i++) {
+        if (used[i]) continue;
+        let value = R[ids[i]!]![ids[pivot]!]!;
+        for (let j = 0; j < rank; j++) value -= factor[i]![j]! * factor[pivot]![j]!;
+        factor[i]![rank] = value / root;
+        residual[i] -= factor[i]![rank]! ** 2;
+      }
+    }
+    return 0;
+  };
+
   const pickWorse = (ids: number[], a: number, b: number, vifs: (number | null)[]) => {
     const va = vifs[a] ?? -Infinity;
     const vb = vifs[b] ?? -Infinity;
@@ -164,13 +194,20 @@ export function pruneCollinear(
   while (keep.length > minKeep) {
     const sub = keep.map((i) => keep.map((j) => R[i]![j]!));
     const vifs = vifFromCorr(sub);
+    const singular = vifs.some((v) => v === Infinity);
     let worst = -1;
     let worstVif = maxVif;
-    for (let t = 0; t < keep.length; t++) {
-      const v = vifs[t];
-      if (v != null && v > worstVif) {
-        worstVif = v;
-        worst = t;
+    if (singular) {
+      // Pivoted Cholesky finds a dependent direction while retaining the
+      // strongest independent variables, regardless of their input order.
+      worst = weakestPivot(keep);
+    } else {
+      for (let t = 0; t < keep.length; t++) {
+        const v = vifs[t];
+        if (v != null && v > worstVif) {
+          worstVif = v;
+          worst = t;
+        }
       }
     }
     if (worst < 0) {
@@ -193,7 +230,7 @@ export function pruneCollinear(
   return { keep, drop };
 }
 
-function varimax(L: number[][], maxIter = 40): number[][] {
+export function varimax(L: number[][], maxIter = 40): number[][] {
   const p = L.length;
   const k = L[0]?.length ?? 0;
   if (k < 2) return L.map((row) => row.slice());
@@ -215,7 +252,7 @@ function varimax(L: number[][], maxIter = 40): number[][] {
         const Suu = u.reduce((a, x) => a + x * x, 0);
         const Svv = v.reduce((a, x) => a + x * x, 0);
         const Suv = u.reduce((a, x, i) => a + x * v[i]!, 0);
-        const num = Suv - (2 * Su * Sv) / p;
+        const num = 2 * Suv - (2 * Su * Sv) / p;
         const den = Suu - Svv - (Su * Su - Sv * Sv) / p;
         const phi = 0.25 * Math.atan2(num, den);
         maxPhi = Math.max(maxPhi, Math.abs(phi));

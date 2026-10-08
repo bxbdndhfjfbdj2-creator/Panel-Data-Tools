@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { suggestConstructs, pruneCollinear } from "./construct.ts";
+import { suggestConstructs, pruneCollinear, varimax } from "./construct.ts";
 import { SAMPLE_DATASETS } from "./datasets.ts";
 
 test("survey suggestion recovers multiple reflective scales", () => {
@@ -84,6 +84,78 @@ test("pruneCollinear keeps at least two representatives", () => {
   assert.ok(drop.length >= 1);
   assert.ok(!drop.includes(3));
   assert.equal(keep.length + drop.length, 4);
+});
+
+test("singular pruning retains an independent variable at either end and after permutation", () => {
+  const base = [
+    [1, 1, 0.2],
+    [1, 1, 0.2],
+    [0.2, 0.2, 1],
+  ];
+  for (const order of [[0, 1, 2], [2, 0, 1], [1, 2, 0]]) {
+    const R = order.map((i) => order.map((j) => base[i]![j]!));
+    const independentPosition = order.indexOf(2);
+    const { keep, drop } = pruneCollinear([0, 1, 2], R, { maxAbsCorr: 0.9, minKeep: 2 });
+    assert.ok(keep.includes(independentPosition), `independent position lost for order ${order}`);
+    assert.equal(drop.length, 1);
+    assert.equal(keep.length, 2);
+  }
+});
+
+test("singular pruning respects original IDs and removes multiple dependent directions", () => {
+  const R: number[][] = Array.from({ length: 6 }, (_, i) =>
+    Array.from({ length: 6 }, (_, j) => (i === j ? 1 : 0)),
+  );
+  for (const [a, b] of [[0, 1], [2, 4]] as const) {
+    R[a]![b] = 1;
+    R[b]![a] = 1;
+  }
+  // Duplicate columns have matching correlations with independent measures.
+  for (const [dup, original, corr3, corr5] of [[1, 0, 0.2, 0.1], [4, 2, 0.15, 0.05]] as const) {
+    R[dup]![3] = R[original]![3] = corr3;
+    R[3]![dup] = R[3]![original] = corr3;
+    R[dup]![5] = R[original]![5] = corr5;
+    R[5]![dup] = R[5]![original] = corr5;
+  }
+  R[3]![5] = R[5]![3] = 0.05;
+
+  const noncontiguous = pruneCollinear([2, 4, 5], R, { maxAbsCorr: 0.9, minKeep: 2 });
+  assert.ok(noncontiguous.keep.includes(5));
+  assert.equal(noncontiguous.drop.length, 1);
+
+  const repeated = pruneCollinear([0, 1, 2, 3, 4, 5], R, { maxAbsCorr: 0.9, minKeep: 2 });
+  assert.equal(repeated.keep.length, 4);
+  assert.ok(repeated.keep.includes(3));
+  assert.ok(repeated.keep.includes(5));
+  assert.equal(repeated.drop.length, 2);
+});
+
+function varimaxObjective(loadings: number[][]): number {
+  const p = loadings.length;
+  const k = loadings[0]?.length ?? 0;
+  let objective = 0;
+  for (let j = 0; j < k; j++) {
+    let fourth = 0;
+    let squares = 0;
+    for (let i = 0; i < p; i++) {
+      const square = loadings[i]![j]! ** 2;
+      squares += square;
+      fourth += square ** 2;
+    }
+    objective += fourth - (squares * squares) / p;
+  }
+  return objective;
+}
+
+test("gamma=1 unnormalized Varimax does not lower its objective", () => {
+  const loadings = [
+    [0.62, 0.21, 0.18], [0.58, 0.24, 0.11], [0.51, 0.20, 0.27],
+    [0.24, 0.67, 0.16], [0.19, 0.61, 0.23], [0.26, 0.54, 0.31],
+    [0.18, 0.28, 0.70], [0.13, 0.19, 0.62], [0.27, 0.22, 0.57],
+  ];
+  const before = varimaxObjective(loadings);
+  const rotated = varimax(loadings);
+  assert.ok(varimaxObjective(rotated) >= before - 1e-12);
 });
 
 test("collinear construct flags only redundant copies", () => {
