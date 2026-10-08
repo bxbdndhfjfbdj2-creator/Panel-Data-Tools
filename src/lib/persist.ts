@@ -164,6 +164,7 @@ function validateDataset(value: unknown): { value: Dataset } | { error: string }
       }
       if (catalogKeys.has(item.key)) return { error: `catalog key「${item.key}」重复。` };
       catalogKeys.add(item.key);
+      if (!rowKeys.has(item.key)) return { error: `catalog key「${item.key}」未出现在数据列中。` };
     }
   }
   if (ds.valueLabels !== undefined) {

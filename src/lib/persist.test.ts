@@ -52,9 +52,11 @@ test("workspace schema validates enums, finite values, uniqueness, and reference
 
 test("workspace schema rejects empty or duplicate catalog keys and unresolved idKey", () => {
   const catalogItem = (key: string) => ({ key, name: key || "未命名", fill: 1, battery: "", nUnique: 1 });
+  const existingColumn = Object.keys(makeSnapshot().dataset.rows[0]!)[0]!;
   const cases: Array<[string, (snap: WorkspaceSnap) => void]> = [
     ["empty catalog key", (snap) => { snap.dataset.catalog = [catalogItem("")]; }],
-    ["duplicate catalog key", (snap) => { snap.dataset.catalog = [catalogItem("q1"), catalogItem("q1")]; }],
+    ["duplicate catalog key", (snap) => { snap.dataset.catalog = [catalogItem(existingColumn), catalogItem(existingColumn)]; }],
+    ["unresolved catalog key", (snap) => { snap.dataset.catalog = [catalogItem("absent_catalog_column")]; }],
     ["unresolved idKey", (snap) => { snap.dataset.idKey = "absent"; }],
     ["empty idKey", (snap) => { snap.dataset.idKey = "  "; }],
   ];
