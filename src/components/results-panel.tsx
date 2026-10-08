@@ -210,6 +210,7 @@ export function ResultsPanel() {
       transform,
       yearFrom,
       yearTo,
+      thresholds,
       screen,
       weights,
       ranking,

@@ -5,6 +5,7 @@ import { computeScores, computeWeights, crossMethodAnalysis, leaveOneOutInfluenc
 import { bootstrapIntervals, yearStability } from "./diagnose.ts";
 import { actualLatestYear, buildAnalysisContext, describeActualYears, numericYears, resultPeriodLabel, resultViewDescription } from "./slice.ts";
 import { allocateExportFilename, buildMarkdownReport, claimSessionExportFilename, markdownText } from "./report.ts";
+import { DEFAULT_THRESHOLDS } from "./types.ts";
 
 function panelFixture(): Dataset {
   const rows = Array.from({ length: 6 }, (_, i) => [
@@ -107,13 +108,18 @@ test("resampling sensitivity reports deterministic B and explicit disabled reaso
 
 test("report captures actual run context, escapes table text, and separates full from window counts", () => {
   const source = panelFixture();
-  const current = { ...source, rows: source.rows.filter((row) => row.year === 2021) };
+  const current = {
+    ...source,
+    rows: source.rows.filter((row) => row.year === 2021),
+    indicators: source.indicators.map((ind) => ind.key === "x1" ? { ...ind, direction: -1 as const, logMode: "log1p" as const } : ind),
+  };
   current.weightKey = "weight|_key";
   const weights = computeWeights(current, "equal");
   const bundle = computeScores(current, weights, "minmax", "equal");
   const report = buildMarkdownReport({
     dataset: current, sourceDataset: source, method: "equal", standardize: "minmax", missingMode: "listwise",
     transform: { winsor: 0.05, logMode: "ln" }, yearFrom: 2021, yearTo: 2021,
+    thresholds: { ...DEFAULT_THRESHOLDS, maxMissing: 0.2, minCv: 0.03 },
     screen: [], weights: { ...weights, notes: ["note | with _emphasis"] }, ranking: bundle.rows, kmo: null, dropped: 0, alpha: null,
     view: { mode: "year", year: 2021 },
     sensitivity: { ranges: { e0: { lo: 12, hi: 18 } }, requestedB: 36, effectiveB: 29, seed: 2026, status: "active" },
@@ -132,6 +138,9 @@ test("report captures actual run context, escapes table text, and separates full
   assert.match(report, /有效 B=29/);
   assert.match(report, /不是完整置信区间/);
   assert.match(report, /指标实际权重：x1=/);
+  assert.match(report, /筛选阈值：最大缺失率 20\.0%/);
+  assert.match(report, /x1：负向；logMode=指标覆盖（log1p）/);
+  assert.match(report, /x2：正向；logMode=继承全局（ln）/);
   assert.equal(markdownText("a|b\nc"), "a\\|b<br>c");
 });
 
@@ -152,6 +161,7 @@ test("latest-view report lists each entity's actual observation year", () => {
     missingMode: "listwise",
     yearFrom: null,
     yearTo: null,
+    thresholds: DEFAULT_THRESHOLDS,
     screen: [],
     weights,
     ranking,
@@ -163,6 +173,27 @@ test("latest-view report lists each entity's actual observation year", () => {
   assert.match(report, /\| 排名 \| 名称 \| 观测期 \| 综合指数 \| 分组 \|/);
   assert.ok(report.includes("| e0 | 2020 年 |"));
   assert.ok(report.includes("| e1 | 2021 年 |"));
+});
+
+test("report hash changes when direction, indicator log override, or screening thresholds change", () => {
+  const ds = panelFixture();
+  const reportHash = (dataset: Dataset, thresholds = DEFAULT_THRESHOLDS) => {
+    const weights = computeWeights(dataset, "equal");
+    const ranking = computeScores(dataset, weights, "minmax", "equal").rows;
+    const report = buildMarkdownReport({
+      dataset, method: "equal", standardize: "minmax", missingMode: "listwise",
+      transform: { winsor: 0, logMode: "off" }, yearFrom: null, yearTo: null,
+      thresholds, screen: [], weights, ranking, kmo: null, dropped: 0, alpha: null,
+    });
+    return report.match(/运行 ID \/ 数据哈希：([0-9a-f]{16})/)?.[1];
+  };
+  const base = reportHash(ds);
+  assert.ok(base);
+  const reversed = { ...ds, indicators: ds.indicators.map((ind) => ind.key === "x1" ? { ...ind, direction: -1 as const } : ind) };
+  const transformed = { ...ds, indicators: ds.indicators.map((ind) => ind.key === "x1" ? { ...ind, logMode: "ln" as const } : ind) };
+  assert.notEqual(reportHash(reversed), base);
+  assert.notEqual(reportHash(transformed), base);
+  assert.notEqual(reportHash(ds, { ...DEFAULT_THRESHOLDS, maxAbsCorr: 0.42 }), base);
 });
 
 test("export filenames are safe and deterministically de-duplicated", () => {

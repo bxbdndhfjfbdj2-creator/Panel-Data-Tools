@@ -9,6 +9,7 @@ import {
   type MissingMode,
   type ScreenRow,
   type ScoreRow,
+  type ScreeningThresholds,
   type Standardize,
   type TransformSpec,
   type WeightTable,
@@ -92,6 +93,7 @@ export function buildMarkdownReport(opts: {
   transform?: TransformSpec;
   yearFrom: number | null;
   yearTo: number | null;
+  thresholds: ScreeningThresholds;
   screen: ScreenRow[];
   weights: WeightTable;
   ranking: ScoreRow[];
@@ -112,6 +114,7 @@ export function buildMarkdownReport(opts: {
     transform,
     yearFrom,
     yearTo,
+    thresholds,
     screen,
     weights,
     ranking,
@@ -126,7 +129,9 @@ export function buildMarkdownReport(opts: {
   const years = numericYears(ds);
   const runId = stableDataHash({
     datasetId: ds.id, rows: ds.rows, method, standardize, missingMode, transform,
-    yearFrom, yearTo, view, selected: selected.map((i) => i.key), weights,
+    yearFrom, yearTo, view, thresholds,
+    selected: selected.map((i) => ({ key: i.key, direction: i.direction, logMode: i.logMode ?? "inherit", weight: i.weight, dimensionId: i.dimensionId })),
+    weights,
   });
   const lines: string[] = [];
 
@@ -191,6 +196,14 @@ export function buildMarkdownReport(opts: {
   lines.push(`- 实际纳入指标 keys：${selected.map((i) => `\`${markdownText(i.key)}\``).join(", ") || "无"}`);
   lines.push(`- 维度权重：${ds.dimensions.map((d) => `${markdownText(d.name)}=${fmt(weights.dimension[d.id] ?? 0, 6)}`).join("；") || "无"}`);
   lines.push(`- 指标实际权重：${selected.map((i) => `${markdownText(i.key)}=${fmt(weights.indicator[i.key] ?? 0, 6)}`).join("；") || "无"}`);
+  lines.push(`- 筛选阈值：最大缺失率 ${fmtPct(thresholds.maxMissing)}；最低 CV ${fmt(thresholds.minCv, 4)}；最大 |相关系数| ${fmt(thresholds.maxAbsCorr, 4)}；最大 VIF ${fmt(thresholds.maxVif, 4)}；最低题总相关 ${fmt(thresholds.minItemTotal, 4)}；最大地板/天花板比例 ${fmtPct(thresholds.maxFloorCeiling)}`);
+  lines.push("- 纳入指标方向与对数变换：");
+  for (const ind of selected) {
+    const logMode = ind.logMode == null
+      ? `继承全局（${transform?.logMode ?? "off"}）`
+      : `指标覆盖（${ind.logMode}）`;
+    lines.push(`  - ${markdownText(ind.key)}：${ind.direction === 1 ? "正向" : "负向"}；logMode=${markdownText(logMode)}`);
+  }
   if (transform?.logMode === "ln") lines.push("- 变换：ln(x)，非正视为缺失");
   if (transform?.logMode === "log1p") lines.push("- 变换：ln(1+x)，负值视为缺失");
   if (ds.weightKey) lines.push(`- 抽样权重列：${markdownText(ds.weightKey)}（分组均值为加权；个体排名仍按综合指数）`);
