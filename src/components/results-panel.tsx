@@ -35,9 +35,9 @@ import { buildRScript, buildStataDo } from "@/lib/scripts";
 import { displayLabel } from "@/lib/catalog";
 import { toCsv } from "@/lib/csv";
 import { downloadBlob } from "@/lib/persist";
-import { buildMarkdownReport } from "@/lib/report";
-import { numericYears } from "@/lib/slice";
-import { useSlicedDataset, useStudio } from "@/lib/store";
+import { buildMarkdownReport, nextExportFilename } from "@/lib/report";
+import { actualLatestYear, buildAnalysisContext } from "@/lib/slice";
+import { useStudio } from "@/lib/store";
 import { METHOD_META, type AggMethod } from "@/lib/types";
 import { cn, fmt } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -53,9 +53,7 @@ const DIM_COLORS = [
 ];
 
 export function ResultsPanel() {
-  const sliced = useSlicedDataset();
   const full = useStudio((s) => s.dataset);
-  const ds = useMemo(() => ({ ...full, rows: sliced.rows }), [full, sliced.rows]);
   const method = useStudio((s) => s.method);
   const standardize = useStudio((s) => s.standardize);
   const missingMode = useStudio((s) => s.missingMode);
@@ -69,6 +67,12 @@ export function ResultsPanel() {
   const setResultMode = useStudio((s) => s.setResultMode);
   const focusEntity = useStudio((s) => s.focusEntity);
   const setFocusEntity = useStudio((s) => s.setFocusEntity);
+  const context = useMemo(
+    () => buildAnalysisContext(full, yearFrom, yearTo, resultMode, resultYear),
+    [full, yearFrom, yearTo, resultMode, resultYear],
+  );
+  const ds = context.dataset;
+  const view = context.view;
 
   const weights = useMemo(
     () => computeWeights(ds, method, missingMode, transform),
@@ -80,13 +84,13 @@ export function ResultsPanel() {
   );
   const rel = useMemo(() => reliability(ds, transform), [ds, transform]);
   const screen = useMemo(() => screenDataset(ds, thresholds, transform), [ds, thresholds, transform]);
-  const years = useMemo(() => numericYears(ds), [ds]);
+  const years = context.actualYears;
 
   const ranking = useMemo(() => {
     if (ds.kind !== "panel") return [...bundle.rows].sort((a, b) => b.composite - a.composite);
-    if (resultMode === "mean") return meanByEntity(bundle.rows);
-    return rankForYear(bundle.rows, resultYear);
-  }, [bundle.rows, ds.kind, resultYear, resultMode]);
+    if (view.mode === "mean") return meanByEntity(bundle.rows);
+    return rankForYear(bundle.rows, view.mode === "year" ? view.year : null);
+  }, [bundle.rows, ds.kind, view]);
 
   const ci = useMemo(
     () =>
@@ -98,8 +102,11 @@ export function ResultsPanel() {
         missingMode,
         transform,
         ranking.slice(0, 24).map((r) => r.entity),
+        36,
+        2026,
+        view,
       ),
-    [ds, weights, standardize, method, missingMode, transform, ranking],
+    [ds, weights, standardize, method, missingMode, transform, ranking, view],
   );
   const stab = useMemo(
     () => yearStability(ds, weights, standardize, method, missingMode, transform),
@@ -131,7 +138,7 @@ export function ResultsPanel() {
     if (ds.kind !== "panel" || !entity) return [];
     return bundle.rows
       .filter((r) => r.entity === entity)
-      .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
+      .sort((a, b) => a.time == null ? (b.time == null ? 0 : 1) : b.time == null ? -1 : a.time - b.time)
       .map((r) => ({
         year: r.time,
         综合: Math.round(r.composite * 10) / 10,
@@ -142,13 +149,13 @@ export function ResultsPanel() {
   }, [bundle.rows, entity, ds]);
 
   const cross = useMemo(
-    () => crossMethodAnalysis(ds, standardize, undefined, missingMode, transform),
-    [ds, standardize, missingMode, transform],
+    () => crossMethodAnalysis(ds, standardize, undefined, missingMode, transform, view),
+    [ds, standardize, missingMode, transform, view],
   );
 
   const influence = useMemo(
-    () => leaveOneOutInfluence(ds, method, standardize, missingMode, transform),
-    [ds, method, standardize, missingMode, transform],
+    () => leaveOneOutInfluence(ds, method, standardize, missingMode, transform, view),
+    [ds, method, standardize, missingMode, transform, view],
   );
 
   const heat = useMemo(() => {
@@ -183,19 +190,20 @@ export function ResultsPanel() {
       "综合指数",
       ...ds.dimensions.map((d) => d.name),
     ];
-    const rows = bundle.rows.map((r) => ({
+    const rows = ranking.map((r) => ({
       [ds.entityKey]: r.entity,
       ...(ds.timeKey ? { [ds.timeKey]: r.time } : {}),
       综合指数: Math.round(r.composite * 100) / 100,
       ...Object.fromEntries(ds.dimensions.map((d) => [d.name, Math.round((r.dims[d.id] ?? 0) * 100) / 100])),
     }));
-    downloadBlob(`${ds.goalName}-scores.csv`, toCsv(headers, rows), "text/csv");
+    downloadBlob(nextExportFilename(`${ds.goalName}-scores`, "csv"), toCsv(headers, rows), "text/csv");
     toast.success("已导出综合得分");
   }
 
   function exportReport() {
     const md = buildMarkdownReport({
       dataset: ds,
+      sourceDataset: full,
       method,
       standardize,
       missingMode,
@@ -208,19 +216,24 @@ export function ResultsPanel() {
       kmo: bundle.kmo,
       dropped: bundle.dropped,
       alpha: rel.overall,
+      view,
+      sensitivity: ci,
+      stability: stab,
+      crossMethod: cross,
+      influence,
     });
-    downloadBlob(`${ds.goalName}-报告.md`, md, "text/markdown");
+    downloadBlob(nextExportFilename(`${ds.goalName}-报告`, "md"), md, "text/markdown");
     toast.success("已导出方法报告");
   }
 
   function exportScripts() {
     downloadBlob(
-      `${ds.goalName}.do`,
+      nextExportFilename(`${ds.goalName}-草图`, "do"),
       buildStataDo(ds, method, standardize, missingMode, transform),
       "text/plain",
     );
     downloadBlob(
-      `${ds.goalName}.R`,
+      nextExportFilename(`${ds.goalName}-草图`, "R"),
       buildRScript(ds, method, standardize, missingMode, transform),
       "text/plain",
     );
@@ -236,7 +249,9 @@ export function ResultsPanel() {
           <p className="mt-2 max-w-2xl text-sm text-muted">
             {METHOD_META[method].label} · {method === "topsis" ? "TOPSIS 方向调整极差标准化" : standardize === "minmax" ? "极差标准化" : "Z 分数"}
             {missingMode === "mean" ? " · 均值填补" : missingMode === "pairwise" ? " · 可用指标" : ""}
-            {panelRankHint(ds.kind, resultMode, resultYear)}
+            {panelRankHint(ds.kind, view.mode === "mean" ? "mean" : "latest", view.year)}
+            {ds.kind === "panel" && view.mode === "latest" ? ` · 最新实际年份 ${actualLatestYear(ds) ?? "无有效年份"}` : ""}
+            {` · 当前窗口 ${context.observations} 条 / ${context.entities} 个实体`}
             {bundle.dropped ? ` · 因缺失删除 ${bundle.dropped} 条` : ""}
           </p>
         </div>
@@ -244,7 +259,7 @@ export function ResultsPanel() {
           {ds.kind === "panel" && years.length > 0 && (
             <SelectNative
               className="h-10 w-36"
-              value={resultMode === "mean" ? "mean" : resultYear == null ? "" : String(resultYear)}
+              value={view.mode === "mean" ? "mean" : view.mode === "year" ? String(view.year) : ""}
               onChange={(e) => {
                 if (e.target.value === "mean") setResultMode("mean");
                 else {
@@ -292,7 +307,8 @@ export function ResultsPanel() {
       <div className="grid gap-4 lg:grid-cols-5">
         <section className="rounded-xl bg-surface p-4 shadow-border lg:col-span-3 sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-medium">{rankHeading(ds.kind, resultMode, resultYear)}</h3>
+            <h3 className="text-sm font-medium">{rankHeading(ds.kind, view.mode === "mean" ? "mean" : "latest", view.year)}</h3>
+            <span className="text-xs text-muted">当前窗口结果</span>
             {ds.groupKey && (
               <div className="flex rounded-md bg-bg p-0.5 text-xs">
                 <button
@@ -361,6 +377,14 @@ export function ResultsPanel() {
           </div>
         </section>
       </div>
+
+      <section className="rounded-xl bg-surface p-4 shadow-border sm:p-5">
+        <h3 className="text-sm font-medium">重抽样敏感性范围</h3>
+        <p className="mt-1 text-xs text-muted">
+          seed {ci.seed} · 请求 B={ci.requestedB} · 有效 B={ci.effectiveB}。这是重抽样敏感性范围，不是完整置信区间。
+          {ci.status === "disabled" ? ` 当前停用：${sensitivityReason(ci.reason)}。` : ""}
+        </p>
+      </section>
 
       {contrib.length > 0 && (
         <section className="rounded-xl bg-surface p-4 shadow-border sm:p-5">
@@ -543,7 +567,7 @@ export function ResultsPanel() {
         <section className="rounded-xl bg-surface p-4 shadow-border sm:p-5">
           <h3 className="text-sm font-medium">时间稳健 · 与最新年秩相关</h3>
           <p className="mt-1 text-xs text-muted">
-            固定全样本权重，按年重算得分。平均 ρ {fmt(stab.meanRho, 3)}。接近 1 说明名次不随年份剧烈跳动。
+            固定当前窗口权重，按年重算得分。平均 ρ {fmt(stab.meanRho, 3)}。接近 1 说明名次不随年份剧烈跳动。
           </p>
           <ul className="mt-3 grid gap-2 sm:grid-cols-3">
             {stab.rho.map((x) => (
@@ -588,19 +612,27 @@ function Kpi({ label, value }: { label: string; value: string }) {
 function panelRankHint(kind: string, mode: "latest" | "mean", year: number | null) {
   if (kind !== "panel") return "";
   if (mode === "mean") return " · 个体时期均值排名";
-  if (year) return ` · ${year} 年排名`;
+  if (year != null) return ` · ${year} 年排名`;
   return " · 排名取最新年份";
 }
 
 function rankHeading(kind: string, mode: "latest" | "mean", year: number | null) {
   if (kind !== "panel") return "个体得分";
   if (mode === "mean") return "时期均值排名";
-  if (year) return `${year} 年排名`;
+  if (year != null) return `${year} 年排名`;
   return "最新年份排名";
 }
 
-function bandText(ci: Record<string, { lo: number; hi: number }> | undefined, entity: string) {
-  const band = ci ? ci[entity] : undefined;
+function sensitivityReason(reason: string | undefined) {
+  if (reason === "too_few_entities") return "所选结果少于 6 个实体";
+  if (reason === "too_many_rows") return "观测数超过 3500 行规模上限";
+  if (reason === "invalid_repetitions") return "重复次数无效";
+  if (reason === "no_valid_repetitions") return "没有有效重抽样";
+  return "未计算";
+}
+
+function bandText(ci: Record<string, { lo: number; hi: number }>, entity: string) {
+  const band = ci[entity];
   if (!band) return "—";
   return `${fmt(band.lo, 0)}-${fmt(band.hi, 0)}`;
 }
@@ -618,7 +650,7 @@ function RankTable({
   active: string | null;
   onPick: (e: string) => void;
   max: number;
-  ci?: Record<string, { lo: number; hi: number }>;
+  ci: { ranges: Record<string, { lo: number; hi: number }>; effectiveB: number };
 }) {
   return (
     <div className="max-h-96 overflow-auto">
@@ -628,7 +660,7 @@ function RankTable({
             <th className="px-2 py-2 font-medium">#</th>
             <th className="px-2 py-2 font-medium">名称</th>
             <th className="px-2 py-2 font-medium">指数</th>
-            <th className="hidden px-2 py-2 font-medium md:table-cell">区间</th>
+            <th className="hidden px-2 py-2 font-medium md:table-cell">敏感性范围</th>
             <th className="hidden px-2 py-2 font-medium sm:table-cell">分布</th>
           </tr>
         </thead>
@@ -649,7 +681,7 @@ function RankTable({
               </td>
               <td className="px-2 py-2 tabular font-medium">{fmt(r.composite, 1)}</td>
               <td className="hidden px-2 py-2 tabular text-muted md:table-cell">
-                {bandText(ci, r.entity)}
+                {bandText(ci.ranges, r.entity)}
               </td>
               <td className="hidden px-2 py-2 sm:table-cell">
                 <div className="h-1.5 w-full rounded-full bg-bg-subtle">

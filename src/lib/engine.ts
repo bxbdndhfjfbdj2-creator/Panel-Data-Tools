@@ -880,7 +880,7 @@ export function latestByEntity(rows: ScoreRow[]): ScoreRow[] {
   const map = new Map<string, ScoreRow>();
   for (const r of rows) {
     const prev = map.get(r.entity);
-    if (!prev || (r.time ?? 0) > (prev.time ?? 0)) map.set(r.entity, r);
+    if (!prev || (r.time != null && (prev.time == null || r.time > prev.time))) map.set(r.entity, r);
   }
   return [...map.values()].sort((a, b) => b.composite - a.composite);
 }
@@ -939,6 +939,15 @@ export function rankForYear(rows: ScoreRow[], year: number | null): ScoreRow[] {
   return rows
     .filter((r) => r.time === year)
     .sort((a, b) => b.composite - a.composite);
+}
+
+export type ResultView = { mode: "latest" | "mean" | "year"; year: number | null };
+
+/** Resolve the visible result from a single already-windowed score set. */
+export function selectResultRows(rows: ScoreRow[], view: ResultView): ScoreRow[] {
+  if (view.mode === "mean") return meanByEntity(rows);
+  if (view.mode === "year") return rankForYear(rows, view.year);
+  return latestByEntity(rows);
 }
 
 export function groupMeans(rows: ScoreRow[]): {
@@ -1009,6 +1018,7 @@ export function crossMethodAnalysis(
   methods: AggMethod[] = COMPARE_METHODS,
   missing: MissingMode = "listwise",
   tx: TransformSpec = DEFAULT_TRANSFORM,
+  view: ResultView = { mode: "latest", year: null },
 ): CrossMethod {
   const ranks: Record<string, Record<string, number>> = {};
   const scores: Record<string, Record<string, number>> = {};
@@ -1021,14 +1031,11 @@ export function crossMethodAnalysis(
     const b = computeScores(ds, w, standardize, m, missing, tx);
     if (b.error) { skipped[m] = b.error; continue; }
     supported.push(m);
-    const latest =
-      ds.kind === "panel"
-        ? latestByEntity(b.rows)
-        : [...b.rows].sort((a, c) => c.composite - a.composite);
-    if (!entities.length) entities = latest.map((r) => r.entity);
+    const visible = ds.kind === "panel" ? selectResultRows(b.rows, view) : [...b.rows].sort((a, c) => c.composite - a.composite);
+    if (!entities.length) entities = visible.map((r) => r.entity);
     ranks[m] = {};
     scores[m] = {};
-    latest.forEach((r, i) => {
+    visible.forEach((r, i) => {
       ranks[m]![r.entity] = i + 1;
       scores[m]![r.entity] = r.composite;
     });
@@ -1091,15 +1098,13 @@ export function leaveOneOutInfluence(
   standardize: Standardize,
   missing: MissingMode,
   tx: TransformSpec = DEFAULT_TRANSFORM,
+  view: ResultView = { mode: "latest", year: null },
 ): InfluenceRow[] {
   const selected = ds.indicators.filter((i) => i.selected && i.dimensionId);
   if (selected.length < 3) return [];
   const baseW = computeWeights(ds, method, missing, tx);
   const base = computeScores(ds, baseW, standardize, method, missing, tx);
-  const baseRank =
-    ds.kind === "panel"
-      ? latestByEntity(base.rows)
-      : [...base.rows].sort((a, b) => b.composite - a.composite);
+  const baseRank = ds.kind === "panel" ? selectResultRows(base.rows, view) : [...base.rows].sort((a, b) => b.composite - a.composite);
   const entities = baseRank.map((r) => r.entity);
   const baseScores = entities.map((e) => baseRank.find((r) => r.entity === e)?.composite ?? NaN);
 
@@ -1110,10 +1115,7 @@ export function leaveOneOutInfluence(
     };
     const w = computeWeights(next, method, missing, tx);
     const b = computeScores(next, w, standardize, method, missing, tx);
-    const ranked =
-      ds.kind === "panel"
-        ? latestByEntity(b.rows)
-        : [...b.rows].sort((a, c) => c.composite - a.composite);
+    const ranked = ds.kind === "panel" ? selectResultRows(b.rows, view) : [...b.rows].sort((a, c) => c.composite - a.composite);
     const scores = entities.map((e) => ranked.find((r) => r.entity === e)?.composite ?? NaN);
     return { key: ind.key, name: ind.name, rho: spearman(baseScores, scores) };
   }).sort((a, b) => a.rho - b.rho);

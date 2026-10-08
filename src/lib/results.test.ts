@@ -1,0 +1,129 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import type { Dataset } from "./types.ts";
+import { computeScores, computeWeights, crossMethodAnalysis, leaveOneOutInfluence, selectResultRows } from "./engine.ts";
+import { bootstrapIntervals, yearStability } from "./diagnose.ts";
+import { actualLatestYear, buildAnalysisContext, numericYears } from "./slice.ts";
+import { allocateExportFilename, buildMarkdownReport, claimSessionExportFilename, markdownText } from "./report.ts";
+
+function panelFixture(): Dataset {
+  const rows = Array.from({ length: 6 }, (_, i) => [
+    { id: `e${i}`, year: 2020, group: "A|one", x1: i + 1, x2: 7 - i, x3: i % 2 },
+    { id: `e${i}`, year: 2021, group: "A|one", x1: i + 2, x2: 8 - i, x3: (i + 1) % 2 },
+    { id: `e${i}`, year: null, group: "A|one", x1: 99, x2: 99, x3: 0 },
+  ]).flat();
+  return {
+    id: "result-fixture", name: "fixture", kind: "panel", description: "", sourceNote: "source|note",
+    rows, entityKey: "id", timeKey: "year", groupKey: "group",
+    indicators: [
+      { key: "x1", name: "X|one", direction: 1, dimensionId: "d1", selected: true, weight: 0.5 },
+      { key: "x2", name: "X two", direction: 1, dimensionId: "d1", selected: true, weight: 0.5 },
+      { key: "x3", name: "X three", direction: 1, dimensionId: "d1", selected: true, weight: 0 },
+    ],
+    dimensions: [{ id: "d1", name: "D|one", weight: 1 }], goalName: "Goal|A",
+  };
+}
+
+test("analysis context uses one year window and never treats null time as year zero", () => {
+  const source = panelFixture();
+  assert.deepEqual(numericYears(source), [2020, 2021]);
+  const context = buildAnalysisContext(source, 2020, 2021, "latest", null);
+  assert.equal(context.dataset.rows.length, 12);
+  assert.equal(context.latestYear, 2021);
+  assert.equal(context.view.mode, "latest");
+  assert.equal(context.entities, 6);
+  assert.ok(context.dataset.rows.every((row) => row.year !== null));
+
+  const nullOnly: Dataset = { ...source, rows: source.rows.filter((row) => row.year === null) };
+  assert.deepEqual(numericYears(nullOnly), []);
+  assert.equal(buildAnalysisContext(nullOnly, null, null, "latest", null).latestYear, null);
+
+  const unavailableYear = buildAnalysisContext(source, 2020, 2021, "latest", 2022);
+  assert.deepEqual(unavailableYear.actualYears, [2020, 2021]);
+  assert.deepEqual(unavailableYear.view, { mode: "latest", year: null });
+});
+
+test("latest actual year scans large datasets without spreading an array into Math.max", () => {
+  const ds: Dataset = {
+    ...panelFixture(),
+    rows: Array.from({ length: 150_000 }, (_, year) => ({ year })),
+  };
+  assert.equal(actualLatestYear(ds), 149_999);
+});
+
+test("selected-year and period-mean views select the same scores used by downstream analysis", () => {
+  const ds = panelFixture();
+  const weights = computeWeights(ds, "equal");
+  const scored = computeScores(ds, weights, "minmax", "equal");
+  const year = selectResultRows(scored.rows, { mode: "year", year: 2020 });
+  const mean = selectResultRows(scored.rows, { mode: "mean", year: null });
+  assert.equal(year.length, 6);
+  assert.ok(year.every((row) => row.time === 2020));
+  assert.equal(mean.length, 6);
+  assert.ok(mean.every((row) => row.time === null));
+  assert.notDeepEqual(year.map((row) => row.composite), mean.map((row) => row.composite));
+  assert.deepEqual(yearStability(ds, weights, "minmax", "equal", "listwise")?.years, [2020, 2021]);
+  const specified = crossMethodAnalysis(ds, "minmax", ["equal", "entropy"], "listwise", { winsor: 0, logMode: "off" }, { mode: "year", year: 2020 });
+  const latest = crossMethodAnalysis(ds, "minmax", ["equal", "entropy"], "listwise", { winsor: 0, logMode: "off" }, { mode: "latest", year: null });
+  assert.notDeepEqual(specified.scores.equal, latest.scores.equal);
+  const looSpecified = leaveOneOutInfluence(ds, "equal", "minmax", "listwise", { winsor: 0, logMode: "off" }, { mode: "year", year: 2020 });
+  const looLatest = leaveOneOutInfluence(ds, "equal", "minmax", "listwise", { winsor: 0, logMode: "off" }, { mode: "latest", year: null });
+  assert.notDeepEqual(looSpecified, looLatest);
+});
+
+test("resampling sensitivity reports deterministic B and explicit disabled reasons", () => {
+  const ds = panelFixture();
+  const weights = computeWeights(ds, "equal");
+  const args = [ds, weights, "minmax", "equal", "listwise", { winsor: 0, logMode: "off" }, Array.from({ length: 6 }, (_, i) => `e${i}`), 12, 77] as const;
+  const first = bootstrapIntervals(...args);
+  const second = bootstrapIntervals(...args);
+  assert.equal(first.status, "active");
+  assert.equal(first.requestedB, 12);
+  assert.equal(first.effectiveB, 12);
+  assert.equal(first.seed, 77);
+  assert.deepEqual(first.ranges, second.ranges);
+
+  const tooFew = bootstrapIntervals(ds, weights, "minmax", "equal", "listwise", { winsor: 0, logMode: "off" }, ["e1", "e2"], 12);
+  assert.equal(tooFew.status, "disabled");
+  assert.equal(tooFew.reason, "too_few_entities");
+  const invalid = bootstrapIntervals(ds, weights, "minmax", "equal", "listwise", { winsor: 0, logMode: "off" }, ["e1"], 0);
+  assert.equal(invalid.reason, "invalid_repetitions");
+});
+
+test("report captures actual run context, escapes table text, and separates full from window counts", () => {
+  const source = panelFixture();
+  const current = { ...source, rows: source.rows.filter((row) => row.year === 2021) };
+  const weights = computeWeights(current, "equal");
+  const bundle = computeScores(current, weights, "minmax", "equal");
+  const report = buildMarkdownReport({
+    dataset: current, sourceDataset: source, method: "equal", standardize: "minmax", missingMode: "listwise",
+    transform: { winsor: 0.05, logMode: "ln" }, yearFrom: 2021, yearTo: 2021,
+    screen: [], weights, ranking: bundle.rows, kmo: null, dropped: 0, alpha: null,
+    view: { mode: "year", year: 2021 },
+    sensitivity: { ranges: { e0: { lo: 12, hi: 18 } }, requestedB: 36, effectiveB: 29, seed: 2026, status: "active" },
+  });
+  assert.match(report, /全量观测：18 行/);
+  assert.match(report, /观测：6 行/);
+  assert.match(report, /method=equal; standardize=minmax; missing=listwise; transform=winsor=0\.05, logMode=ln/);
+  assert.match(report, /运行 ID \/ 数据哈希：[0-9a-f]{16}/);
+  assert.match(report, /指定年份 2021/);
+  assert.match(report, /X\\\|one/);
+  assert.match(report, /A\\\|one/);
+  assert.match(report, /有效 B=29/);
+  assert.match(report, /不是完整置信区间/);
+  assert.match(report, /指标实际权重：x1=/);
+  assert.equal(markdownText("a|b\nc"), "a\\|b<br>c");
+});
+
+test("export filenames are safe and deterministically de-duplicated", () => {
+  const first = allocateExportFilename("指标/目标: A", "csv", []);
+  assert.equal(first, "指标_目标_ A.csv");
+  assert.equal(allocateExportFilename("指标/目标: A", "csv", [first]), "指标_目标_ A (2).csv");
+  assert.equal(allocateExportFilename("...", "md", []), "export.md");
+
+  // An empty persisted list models unavailable/failed localStorage; in-session claims still advance.
+  const inSession = new Set<string>();
+  assert.equal(claimSessionExportFilename("report", "md", [], inSession), "report.md");
+  assert.equal(claimSessionExportFilename("report", "md", [], inSession), "report (2).md");
+  assert.equal(claimSessionExportFilename("report", "md", ["report.md", "report (2).md"], inSession), "report (3).md");
+});

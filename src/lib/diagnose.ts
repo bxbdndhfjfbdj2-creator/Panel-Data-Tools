@@ -15,8 +15,9 @@ import {
   transpose,
 } from "./stats";
 import { applyTransform } from "./transform";
-import { computeScores, latestByEntity, rankForYear } from "./engine";
+import { computeScores, rankForYear, selectResultRows, type ResultView } from "./engine";
 import { mulberry32 } from "./prng";
+import { numericYear } from "./slice";
 
 function recode(col: (number | null)[], dir: 1 | -1): (number | null)[] {
   if (dir === 1) return col;
@@ -173,6 +174,15 @@ export interface YearStability {
   meanRho: number | null;
 }
 
+export interface SensitivitySummary {
+  ranges: Record<string, { lo: number; hi: number }>;
+  requestedB: number;
+  effectiveB: number;
+  seed: number;
+  status: "active" | "disabled";
+  reason?: "too_few_entities" | "too_many_rows" | "invalid_repetitions" | "no_valid_repetitions";
+}
+
 export function yearStability(
   ds: Dataset,
   weights: WeightTable,
@@ -182,7 +192,7 @@ export function yearStability(
   tx: TransformSpec = DEFAULT_TRANSFORM,
 ): YearStability | null {
   if (!ds.timeKey) return null;
-  const years = [...new Set(ds.rows.map((r) => Number(r[ds.timeKey!])).filter((y) => Number.isFinite(y)))].sort(
+  const years = [...new Set(ds.rows.map((r) => numericYear(r[ds.timeKey!])).filter((y): y is number => y != null))].sort(
     (a, b) => a - b,
   );
   if (years.length < 2) return null;
@@ -213,10 +223,17 @@ export function bootstrapIntervals(
   tx: TransformSpec,
   entities: string[],
   B = 36,
-): Record<string, { lo: number; hi: number }> {
+  seed = 2026,
+  view: ResultView = { mode: "latest", year: null },
+): SensitivitySummary {
   const out: Record<string, { lo: number; hi: number }> = {};
-  if (entities.length < 6 || ds.rows.length > 3500) return out;
-  const rand = mulberry32(2026);
+  const disabled = (reason: NonNullable<SensitivitySummary["reason"]>): SensitivitySummary => ({
+    ranges: out, requestedB: B, effectiveB: 0, seed, status: "disabled", reason,
+  });
+  if (!Number.isInteger(B) || B < 1) return disabled("invalid_repetitions");
+  if (entities.length < 6) return disabled("too_few_entities");
+  if (ds.rows.length > 3500) return disabled("too_many_rows");
+  const rand = mulberry32(seed);
   const n = ds.rows.length;
   const bags: Record<string, number[]> = {};
   for (const e of entities) bags[e] = [];
@@ -231,6 +248,7 @@ export function bootstrapIntervals(
     });
   }
   const entKeys = [...byEnt.keys()];
+  let effectiveB = 0;
   for (let b = 0; b < B; b++) {
     const idx: number[] = [];
     if (panel && entKeys.length) {
@@ -243,7 +261,9 @@ export function bootstrapIntervals(
     }
     const boot: Dataset = { ...ds, rows: idx.map((i) => ds.rows[i]!) };
     const scored = computeScores(boot, weights, standardize, method, missing, tx);
-    const ranked = panel ? latestByEntity(scored.rows) : scored.rows;
+    if (scored.error || !scored.rows.length) continue;
+    effectiveB += 1;
+    const ranked = panel ? selectResultRows(scored.rows, view) : scored.rows;
     const map = new Map(ranked.map((r) => [r.entity, r.composite]));
     for (const e of entities) {
       const v = map.get(e);
@@ -257,5 +277,6 @@ export function bootstrapIntervals(
     const hi = xs[Math.ceil(0.975 * (xs.length - 1))]!;
     out[e] = { lo, hi };
   }
-  return out;
+  if (!effectiveB) return disabled("no_valid_repetitions");
+  return { ranges: out, requestedB: B, effectiveB, seed, status: "active" };
 }

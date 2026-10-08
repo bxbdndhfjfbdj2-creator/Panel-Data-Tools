@@ -15,7 +15,7 @@ export function buildStataDo(
 ): string {
   const selected = ds.indicators.filter((i) => i.selected && i.dimensionId);
   const lines: string[] = [
-    "* 衡策导出 · 可复现草图，非完整复制 CRITIC/熵权数值",
+    "* 衡策导出 · 草图/非等价复现；不会完整复现本地权重、缺失处理或全部算法",
     `* 目标：${ds.goalName}`,
     `* 方法：${METHOD_META[method].label} · ${standardize} · ${missing}`,
     tx.winsor ? `* 缩尾 ${tx.winsor}` : "",
@@ -73,7 +73,7 @@ export function buildRScript(
   const selected = ds.indicators.filter((i) => i.selected && i.dimensionId);
   const keys = selected.map((i) => i.key);
   const lines: string[] = [
-    "# 衡策导出 · 可复现草图",
+    "# 衡策导出 · 草图/非等价复现；不会完整复现本地权重、缺失处理或全部算法",
     `# 目标：${ds.goalName} · ${METHOD_META[method].label}`,
     `# 标准化 ${standardize} · 缺失 ${missing}`,
     "d <- read.csv('yourdata.csv', check.names = FALSE)",
