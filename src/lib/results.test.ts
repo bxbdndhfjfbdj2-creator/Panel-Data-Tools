@@ -132,10 +132,15 @@ test("report captures actual run context, escapes table text, and separates full
   assert.ok(runId);
   const payloadJson = report.match(/```json\n([\s\S]*?)\n```/)?.[1];
   assert.ok(payloadJson);
-  const hashPayload = JSON.parse(payloadJson) as { selected: { key: string; direction: number; logMode: string; weight: number; dimensionId: string }[]; dimensions: { id: string; name: string; weight: number }[] };
+  const hashPayload = JSON.parse(payloadJson) as {
+    selected: { key: string; direction: number; logMode: string; weight: number; dimensionId: string }[];
+    dimensions: { id: string; name: string; weight: number }[];
+    datasetRoles: { kind: string; entityKey: string; timeKey: string | null; groupKey: string | null; weightKey: string | null; idKey: string | null };
+  };
   assert.equal(stableDataHash(hashPayload), runId);
   assert.deepEqual(hashPayload.selected.find((i) => i.key === "x1"), { key: "x1", direction: -1, logMode: "log1p", weight: 0.8, dimensionId: "d1" });
   assert.deepEqual(hashPayload.dimensions.find((d) => d.id === "d1"), { id: "d1", name: "D|one", weight: 4 });
+  assert.deepEqual(hashPayload.datasetRoles, { kind: "panel", entityKey: "id", timeKey: "year", groupKey: "group", weightKey: "weight|_key", idKey: null });
   assert.match(payloadJson, /"maxMissing": 0\.2/);
   assert.match(payloadJson, /"minCv": 0\.03/);
   assert.match(report, /指定年份 2021/);
@@ -208,10 +213,19 @@ test("report hash changes when direction, indicator log override, or screening t
     dimensions: [...ds.dimensions, { id: "d2", name: "D2", weight: 0.4 }],
     indicators: ds.indicators.map((ind) => ind.key === "x1" ? { ...ind, dimensionId: "d2" } : ind),
   };
+  const roleVariants: Dataset[] = [
+    { ...ds, kind: "survey" },
+    { ...ds, entityKey: "group" },
+    { ...ds, timeKey: "group" },
+    { ...ds, groupKey: "year" },
+    { ...ds, weightKey: "x1" },
+    { ...ds, idKey: "group" },
+  ];
   assert.notEqual(reportHash(reversed), base);
   assert.notEqual(reportHash(transformed), base);
   assert.notEqual(reportHash(reweighted), base);
   assert.notEqual(reportHash(dimensioned), base);
+  for (const changedRoles of roleVariants) assert.notEqual(reportHash(changedRoles), base);
   assert.notEqual(reportHash(ds, { ...DEFAULT_THRESHOLDS, maxAbsCorr: 0.42 }), base);
 
   const preciseThresholdReport = (() => {

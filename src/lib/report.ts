@@ -136,8 +136,17 @@ export function buildMarkdownReport(opts: {
     dimensionId: i.dimensionId,
   }));
   const dimensionsHashConfig = ds.dimensions.map((d) => ({ id: d.id, name: d.name, weight: d.weight }));
+  const datasetRoleConfig = {
+    kind: ds.kind,
+    entityKey: ds.entityKey,
+    timeKey: ds.timeKey ?? null,
+    groupKey: ds.groupKey ?? null,
+    weightKey: ds.weightKey ?? null,
+    idKey: ds.idKey ?? null,
+  };
   const hashPayload = {
     dataHash,
+    datasetRoles: datasetRoleConfig,
     method,
     standardize,
     missingMode,
