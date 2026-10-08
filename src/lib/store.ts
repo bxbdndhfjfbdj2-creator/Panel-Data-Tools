@@ -16,6 +16,7 @@ import type {
   TransformSpec,
 } from "./types";
 import { uid } from "./utils";
+import { parseWorkspace } from "./persist";
 import type { WorkspaceSnap } from "./persist";
 import { sliceByYear } from "./slice";
 import { directionFromName, materializeKeys } from "./catalog";
@@ -426,7 +427,9 @@ export const useStudio = create<StudioState>()((set, get) => ({
   setHeatSelectedOnly: (heatSelectedOnly) => set({ heatSelectedOnly }),
   setFocusEntity: (focusEntity) => set({ focusEntity }),
 
-  hydrate: (snap) =>
+  hydrate: (input) => {
+    const snap = parseWorkspace(input);
+    if (!snap) return;
     set({
       step: snap.step,
       dataset: snap.dataset,
@@ -444,7 +447,8 @@ export const useStudio = create<StudioState>()((set, get) => ({
       resultMode: snap.resultMode === "mean" ? "mean" : "latest",
       heatSelectedOnly: snap.heatSelectedOnly ?? false,
       focusEntity: null,
-    }),
+    });
+  },
 
   snapshot: () => {
     const s = get();

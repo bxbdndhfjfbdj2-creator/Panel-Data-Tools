@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FolderOpen } from "lucide-react";
-import { parseWorkspace, readWorkspace, writeWorkspace, downloadBlob, type WorkspaceSnap } from "@/lib/persist";
+import { parseWorkspaceResult, readWorkspace, writeWorkspace, downloadBlob, type WorkspaceSnap } from "@/lib/persist";
 import { useStudio } from "@/lib/store";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
@@ -13,7 +13,9 @@ export function WorkspaceMenu() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const restored = useRef(false);
+  const saveErrorToastShown = useRef(false);
 
   useEffect(() => {
     if (!restored.current) {
@@ -31,8 +33,18 @@ export function WorkspaceMenu() {
       clearTimeout(t);
       t = setTimeout(() => {
         const snap: WorkspaceSnap = { ...useStudio.getState().snapshot(), savedAt: Date.now() };
-        writeWorkspace(snap);
-        setSavedAt(snap.savedAt);
+        const result = writeWorkspace(snap);
+        if (result.ok) {
+          setSavedAt(result.savedAt);
+          setSaveError(null);
+          saveErrorToastShown.current = false;
+        } else {
+          setSaveError(result.error);
+          if (!saveErrorToastShown.current) {
+            toast.error(result.error);
+            saveErrorToastShown.current = true;
+          }
+        }
       }, 500);
     });
     return () => {
@@ -71,6 +83,15 @@ export function WorkspaceMenu() {
             数据与设定只留在本机。刷新后自动恢复上次方案，也可导出 JSON 备份。
           </DialogDescription>
           <div className="mt-4 grid gap-2">
+            {saveError ? (
+              <p role="status" className="text-sm text-destructive">{saveError}</p>
+            ) : savedAt ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                已保存：{new Date(savedAt).toLocaleString("zh-CN")}
+              </p>
+            ) : (
+              <p role="status" className="text-sm text-muted-foreground">尚未保存到本机</p>
+            )}
             <Button
               variant="secondary"
               disabled={!savedAt}
@@ -91,9 +112,9 @@ export function WorkspaceMenu() {
                 e.target.value = "";
                 if (!f) return;
                 try {
-                  const snap = parseWorkspace(JSON.parse(await f.text()));
-                  if (!snap) throw new Error("文件结构无法识别");
-                  hydrate(snap);
+                  const result = parseWorkspaceResult(JSON.parse(await f.text()));
+                  if (!result.ok) throw new Error(result.error);
+                  hydrate(result.value);
                   toast.success("已导入方案");
                   setOpen(false);
                 } catch (err) {
