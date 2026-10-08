@@ -46,12 +46,9 @@ import {
 } from "./transform";
 import {
   assocMatrix,
-  kendallW,
   mad as madStat,
-  median,
   pearsonSpearmanGap,
   robustCv,
-  trimmedMean,
 } from "./npar";
 
 function preparedCols(ds: Dataset, keys: string[], tx: TransformSpec) {

@@ -278,7 +278,9 @@ function tokenIdentityKey(token: string): string {
             .digest("base64url");
         }
       }
-    } catch {}
+    } catch {
+      // The token may be opaque or malformed; fall back to its full-token hash.
+    }
   }
   return createHash("sha256").update(token).digest("base64url");
 }

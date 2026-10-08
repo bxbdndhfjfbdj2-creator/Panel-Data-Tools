@@ -35,33 +35,45 @@ test("weighted mean matches hand calc", () => {
   assert.equal(weightedMean(xs, w), 2.25);
 });
 
-test("dta reader parses CFPS county match file", () => {
-  const buf = readFileSync("/workspace/artifacts/survey/cfps/顺序码匹配.dta");
+test("Stata reader parses the portable synthetic fixture", () => {
+  const buf = readFileSync(
+    new URL("../../test-fixtures/synthetic/stata-import.synthetic.dta", import.meta.url),
+  );
   const table = parseDta(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
-  assert.equal(table.nObs, 162);
-  assert.equal(table.nVar, 6);
-  assert.ok(table.headers.includes("provname"));
-  assert.equal(typeof table.rows[0]?.countyid, "number");
-  assert.ok(String(table.rows[0]?.provname ?? "").length > 0);
+  assert.equal(table.nObs, 3);
+  assert.equal(table.nVar, 3);
+  assert.deepEqual(table.headers, ["countyid", "provname", "income"]);
+  assert.equal(table.rows[0]?.countyid, 110101);
+  assert.equal(table.rows[1]?.provname, "Central Province");
+  assert.equal(table.rows[2]?.income, 22.75);
+  assert.equal(table.labels.countyid, "Synthetic county code");
 });
 
-test("dta import becomes a dataset", () => {
-  const buf = readFileSync("/workspace/artifacts/survey/cfps/顺序码匹配.dta");
+test("synthetic dta import becomes a dataset", () => {
+  const buf = readFileSync(
+    new URL("../../test-fixtures/synthetic/stata-import.synthetic.dta", import.meta.url),
+  );
   const ds = datasetFromDta(
-    "顺序码匹配.dta",
+    "stata-import.synthetic.dta",
     buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
   );
-  assert.ok(ds.rows.length === 162);
+  assert.equal(ds.rows.length, 3);
   assert.ok(ds.entityKey);
+  assert.equal(ds.rows[0]?.provname, "North Province");
 });
 
-test("xlsx import reads CGSS 2017 codebook", async () => {
-  const buf = readFileSync("/workspace/artifacts/survey/cgss/cgss2017代码表.xls");
+test("synthetic Excel import reads a codebook workbook", async () => {
+  const buf = readFileSync(
+    new URL("../../test-fixtures/synthetic/excel-codebook.synthetic.xls", import.meta.url),
+  );
   const ds = await datasetFromSpreadsheet(
-    "cgss2017代码表.xls",
+    "excel-codebook.synthetic.xls",
     buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
   );
-  assert.ok(ds.rows.length > 10);
+  assert.equal(ds.rows.length, 3);
+  assert.deepEqual(Object.keys(ds.rows[0] ?? {}), ["indicator", "value"]);
+  assert.equal(ds.rows[1]?.indicator, "income");
+  assert.equal(ds.rows[1]?.value, 2);
   assert.ok(ds.indicators.length + Object.keys(ds.rows[0] ?? {}).length > 0);
 });
 

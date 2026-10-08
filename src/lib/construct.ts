@@ -276,7 +276,7 @@ function suggestName(names: string[], fallback: string): string {
 }
 
 function stripCode(name: string): string {
-  return name.replace(/^[A-Za-z_]+\d+[.\s_\-]*/, "").trim() || name;
+  return name.replace(/^[A-Za-z_]+\d+[.\s_-]*/, "").trim() || name;
 }
 
 function factorSuggest(
@@ -515,7 +515,7 @@ function clusterSuggest(
   const useDomains = seeded >= 4 && (kWanted == null || k === rec);
   let labels: number[];
   if (useDomains) {
-    labels = pre.map((d, i) => (d >= 0 ? d : -1));
+    labels = pre.map((d) => (d >= 0 ? d : -1));
     for (let i = 0; i < p; i++) {
       if (labels[i] !== -1) continue;
       let best = -Infinity;

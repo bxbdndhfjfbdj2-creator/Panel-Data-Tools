@@ -1,4 +1,8 @@
 node_modules/
+dist/
+.output/
+.vercel/
+.nitro/
 .project_id
 .github_repo
 .env
